@@ -7,33 +7,55 @@
 				height: 600px;
 				width: 100%;
 			}
+
+			.column {
+				float: left;
+				width: 50%;
+			}
+
+			/* Clear floats after the columns */
+			.row:after {
+				content: "";
+				display: table;
+				clear: both;
+			}
 		</style>
 		<script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/build/ol.js"></script>
 		<script src="util.js"></script>
 		<title>v2.0</title>
 	</head>
 <body>
-	<h2>Track my bike</h2>
-	<h4>
-		<div>Time at marker position: <span id="time_at_marker">unknown</span></div>
-		<div>Speed at marker position: <span id="speed_at_marker">unknown</span></div>
-		<div style="color: gray;">Last refresh: <span id="last_refresh">unknown</span></div>
-	</h4>
-	<select id="refresh_interval">
-		<option value="-1" selected>No refresh</option>
-		<option value="5000">5s</option>
-		<option value="30000">30s</option>
-		<option value="60000">1m</option>
-		<option value="120000">2m</option>
-		<option value="300000">5m</option>
-	</select>
-	<button id="update_btn">Manual update</button>
+	<div class="row">
+		<div class="column">
+			<h2>Track my bike</h2>
+			<div>Time at marker position: <span id="time_at_marker">unknown</span></div>
+			<div>Speed at marker position: <span id="speed_at_marker">unknown</span></div>
+			<div style="color: gray;">Last refresh: <span id="last_refresh">unknown</span></div>
+		</div>
+		<div class="column">
+			<div>
+				<label for="refresh_interval">Choose refreshing interval:</label>
+				<select id="refresh_interval">
+					<option value="-1">No refresh</option>
+					<option value="5000">5s</option>
+					<option value="30000">30s</option>
+					<option value="60000">1m</option>
+					<option value="120000" selected>2m</option>
+					<option value="300000">5m</option>
+				</select>
+				<button id="update_btn">Manual update</button>
+			</div>
+			<div id="test"></div>
+		</div>
+	</div>
 	<div id="map" class="map"></div>
 	<script type="text/javascript">
 		const URL_GETPOINTS = 'http://batukah.000webhostapp.com/osholm/v2.0/getPoints.php';
+		const CURSOR_TOLERANCE = 5000;
 
 		var waypoints = []; // Originally downloaded JSON
 		var coords = []; // lon/lat array for showing track on map
+		var ele = [];
 		var projectFunction = ol.proj.getTransform('EPSG:4326', 'EPSG:3857');
 
 		var sourceTrack = new ol.source.Vector({}); // source for track
@@ -41,8 +63,10 @@
 		var trackLine = new ol.geom.LineString([]); // ol.geom.LineString instance for track
 		var markerPoint = new ol.geom.Point([]); // ol.geom.Point instance for marker
 
-		sourceTrack.addFeature(new ol.Feature(trackLine));
-		sourceMarker.addFeature(new ol.Feature({geometry: markerPoint}));
+		sourceTrack.addFeature(new ol.Feature({
+			geometry: trackLine,
+		}));
+		sourceMarker.addFeature(new ol.Feature(markerPoint));
 
 		var updateWaypoints = function(centerTrack=false) {
 			// console.log('updateWaypoints');
@@ -63,7 +87,8 @@
 
 				// Concatenate with already existing data
 				waypoints = waypoints.concat(waypoints_upd);
-				coords = coords.concat(coords_upd);
+				coords = coords.concat(coords_upd[0]);
+				ele = ele.concat(coords_upd[1]);
 
 				// Update track
 				trackLine.setCoordinates(coords);
@@ -91,8 +116,7 @@
 				// Update last_update info
 				last_refresh_obj.innerText = getFormattedDate();
 			});
-		};
-		updateWaypoints(true); // initial update with full track
+		}; updateWaypoints(true); // initial update with full track
 
 		// onClick for [update] button
 		document.getElementById('update_btn').addEventListener('click', function(e) {
@@ -100,6 +124,11 @@
 			setUpdateInterval();
 		});
 
+		var layerTrack = new ol.layer.Vector({
+			name: 'Track',
+			source: sourceTrack,
+			style: styleTrack
+		});
 		var map = new ol.Map({
 			target: 'map',
 			layers: [
@@ -107,11 +136,7 @@
 					name: 'Tile',
 					source: new ol.source.OSM()
 				}),
-				new ol.layer.Vector({
-					name: 'Track',
-					source: sourceTrack,
-					style: styleTrack
-				}),
+				layerTrack,
 				new ol.layer.Vector({
 					name: 'Marker',
 					source: sourceMarker,
@@ -121,13 +146,25 @@
 			view: new ol.View({
 				center: ol.proj.fromLonLat([37.41, 8.82]),
 				zoom: 4
-			})
+			}),
+			controls: ol.control.defaults().extend([
+					new ol.control.ZoomToExtent({
+						extent: [
+							813079.7791264898, 5929220.284081122,
+							848966.9639063801, 5936863.986909639
+						]
+					})
+			])
 		});
+		map.addControl(new ol.control.ScaleLine());
 
+		// Autorefresh part
 		var refresh_interval_obj = document.getElementById('refresh_interval');
 		var time_at_marker_obj = document.getElementById('time_at_marker');
 		var speed_at_marker_obj = document.getElementById('speed_at_marker');
 		var last_refresh_obj = document.getElementById('last_refresh');
+
+		var debug_test_obj = document.getElementById('test');
 
 		var refresh_interval = parseInt(refresh_interval_obj.options[refresh_interval_obj.selectedIndex].value);
 		var refresh_interval_id = null;
@@ -142,8 +179,43 @@
 			if (refresh_interval > 0) {
 				refresh_interval_id = window.setInterval(updateWaypoints, refresh_interval);
 			}
+		}; setUpdateInterval();
+
+		var cursor = null;
+		// Pointer onMouseMove
+		var displayCursor = function(coord) {
+			var closestPoint = trackLine.getClosestPoint(coord);
+			if (Math.sqrt(Math.pow(closestPoint[0] - coord[0], 2) + Math.pow(closestPoint[1] - coord[1], 2)) > CURSOR_TOLERANCE) {
+				cursor = null;
+				map.render();
+				return;
+			}
+			if (cursor === null)  cursor = new ol.geom.Point(closestPoint);
+			else cursor.setCoordinates(closestPoint);
+			map.render();
 		};
-		setUpdateInterval();
+		map.on('pointermove', function(evt) {
+			if (evt.dragging) return;
+			var coord = map.getEventCoordinate(evt.originalEvent);
+			displayCursor(coord);
+		});
+		map.on('click', function(evt) {
+
+			var features = [];
+			map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
+				features.push(feature);
+			});
+			console.log(features);
+
+			displayCursor(evt.coordinate);
+		});
+
+		layerTrack.on('postrender', function(evt) {
+			var vectorContext = ol.render.getVectorContext(evt);
+			vectorContext.setStyle(styleCursor);
+			if (cursor !== null)
+				vectorContext.drawGeometry(cursor);
+		});
 	</script>
 </body>
 </html>

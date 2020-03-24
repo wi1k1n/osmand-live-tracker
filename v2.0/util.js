@@ -22,10 +22,12 @@ var getFormattedDate = function() {
 // Takes waypoints dictionary and returns lon/lat array
 var waypoints2coords = function(wps) {
 	let coords = [wps.length];
+	let ele = [wps.length];
 	for (let i = 0; i < wps.length; i++) {
 		coords[i] = [wps[i]['lon'], wps[i]['lat']];
+		ele[i] = wps[i]['ele'];
 	}
-	return coords;
+	return [coords, ele];
 };
 
 // Styles for map
@@ -36,14 +38,31 @@ var styleTrack = new ol.style.Style({
 	})
 });
 var styleMarker = new ol.style.Style({
+	image: new ol.style.Icon({
+		anchor: [0.5, 1],
+		scale: 0.5,
+		src: 'img/pin.png'
+	})
+	// image: new ol.style.Circle({
+	// 	radius: 5,
+	// 	fill: new ol.style.Fill({
+	// 		color: 'rgb(255, 255, 0)'
+	// 	}),
+	// 	stroke: new ol.style.Stroke({
+	// 		color: 'rgb(0, 0, 0)',
+	// 		width: 2
+	// 	})
+	// })
+});
+var styleCursor = new ol.style.Style({
 	image: new ol.style.Circle({
 		radius: 5,
 		fill: new ol.style.Fill({
-			color: 'rgb(255, 255, 0)'
+			color: 'rgba(255, 255, 0, 0.7)'
 		}),
 		stroke: new ol.style.Stroke({
-			color: 'rgb(0, 0, 0)',
-			width: 2
-		})
+			color: 'rgb(0,0,0)',
+			width: 1
+		}),
 	})
 });
