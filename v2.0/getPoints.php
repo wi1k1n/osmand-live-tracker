@@ -36,7 +36,7 @@
                          . ', "hdop": ' . ($row['hdop'] ? $row['hdop'] : 'null')
                          . ', "altitude": ' . ($row['altitude'] ? $row['altitude'] : 'null')
                          . ', "speed": ' . ($row['speed'] ? $row['speed'] : 'null')
-                         . ', "sender": ' . ($row['sender'] ? $row['sender'] : 'null')
+                         . ', "sender": ' . ($row['sender'] ? ('"'.$row['sender'].'"') : 'null')
                          . '},';
     }
     $res->close();
