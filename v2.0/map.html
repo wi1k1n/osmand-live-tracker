@@ -34,11 +34,24 @@
 			.ol-touch .ol-control-marker {
 				top: 118px;
 			}
+			.ol-control-panel {
+				width: 180px;
+				height: 75px;
+				left: unset;
+				top: unset;
+				right: 8px;
+				bottom: 24px;
+				background-color: rgba(177, 119, 255, 0.8);
+				display: none;
+			}
+			.ol-control-panel:hover {
+				background-color: rgba(177, 119, 255, 0.8);
+			}
 
 			/* === 2 column layout === */
 			.column {
 				float: left;
-				width: 50%;
+				width: 33.3%;
 			}
 			/* Clear floats after the columns */
 			.row:after {
@@ -121,7 +134,6 @@
 				</select><br>
 				<button id="update_btn">Manual update</button>
 			</div>
-			<div id="test"></div>
 		</div>
 	</div>
 	<div id="map" class="map"></div>
@@ -129,9 +141,16 @@
 		<a href="#" id="popup-closer" class="ol-popup-closer"></a>
 		<div id="popup-content"></div>
 	</div>
+	<div class="ol-control-panel ol-unselectable ol-control" id="cur_info_container">
+		<div>Sender: <span id="cur_sender"></span></div>
+		<div>Time: <span id="cur_timestamp"></span></div>
+		<div>Speed: <span id="cur_speed"></span></div>
+		<div>Altitude: <span id="cur_ele"></span></div>
+	</div>
 	<script type="text/javascript">
 		const URL_GETPOINTS = 'http://batukah.000webhostapp.com/osholm/v2.0/getPoints.php';
 		const CURSOR_TOLERANCE = 5000;
+		const DEBUG = false;
 
 		var waypoints = []; // Originally downloaded JSON
 		var coords = []; // lon/lat array for showing track on map
@@ -153,12 +172,17 @@
 			view.setCenter(trackLine.getLastCoordinate());
 			view.setZoom(15);
 		}
+		var DEBUG_curDataIndex = 0;
+		const DEBUG_DATABATCH = 10;
 		var updateWaypoints = function(centerTrack=false) {
 			// console.log('updateWaypoints');
 			let url = URL_GETPOINTS;
 			if (waypoints.length > 0) url += '?starting=' + waypoints[waypoints.length-1]['uid'];
 			// <DEBUG>
-			// url = URL_GETPOINTS + '?starting=20&ending=30';
+			if (DEBUG) {
+				url = URL_GETPOINTS + '?starting=' + DEBUG_curDataIndex + '&ending=' + (DEBUG_curDataIndex + DEBUG_DATABATCH);
+				DEBUG_curDataIndex += DEBUG_DATABATCH;
+			}
 			// </DEBUG>
 			getJSON(url,  function(err, data) {
 				if (err != null || data == null) {
@@ -216,12 +240,11 @@
 		});
 
 		// Popup on cursor
-		var popupContainer = document.getElementById('popup');
 		var popupContent = document.getElementById('popup-content');
 		var popupCloser = document.getElementById('popup-closer');
 
 		var cursorOverlay = new ol.Overlay({
-			element: popupContainer,
+			element: document.getElementById('popup'),
 			autoPan: true,
 			autoPanAnimation: {
 				duration: 10
@@ -236,7 +259,6 @@
 			closePopup();
 			return false;
 		};
-
 
 		var layerTrack = new ol.layer.Vector({
 			name: 'Track',
@@ -277,8 +299,8 @@
 		});
 		map.addControl(new ol.control.ScaleLine({bar: true, text: false}));
 		map.addControl(new ol.control.FullScreen());
+		map.addControl(new ol.control.Control({ element: document.getElementById('cur_info_container') }));
 
-		// Autorefresh part
 		var refresh_interval_obj = document.getElementById('refresh_interval');
 		var time_at_marker_obj = document.getElementById('time_at_marker');
 		var time_on_start_obj = document.getElementById('time_on_start');
@@ -286,8 +308,13 @@
 		var dst_travelled_obj = document.getElementById('dst_travelled');
 		var last_refresh_obj = document.getElementById('last_refresh');
 
-		var debug_test_obj = document.getElementById('test');
+		var cur_info_container_obj = document.getElementById('cur_info_container');
+		var cur_sender_obj = document.getElementById('cur_sender');
+		var cur_timestamp_obj = document.getElementById('cur_timestamp');
+		var cur_speed_obj = document.getElementById('cur_speed');
+		var cur_ele_obj = document.getElementById('cur_ele');
 
+		// Autorefresh part
 		var refresh_interval = parseInt(refresh_interval_obj.options[refresh_interval_obj.selectedIndex].value);
 		var refresh_interval_id = null;
 		refresh_interval_obj.onchange = function() {
@@ -313,7 +340,8 @@
 				// Cursor not in tolerance
 				cursor = null;
 				map.render();
-				debug_test_obj.innerHTML = '';
+				// Hide info panel
+				cur_info_container_obj.style.display = "none";
 				// If not in tolerance and no alt (i.e. track point request) ~ ordinary click on map -> close popup
 				if (click && !alt) {
 					closePopup();
@@ -334,10 +362,28 @@
 
 				let infoContent = '';
 				if (wp) { // Updating info on page if found
-					infoContent = (wp.timestamp_log ? wp.timestamp_log : wp.timestamp_server);
-					if (wp.speed) infoContent += '<br>' + Number(parseFloat(wp.speed) * 3.6).toFixed(1) + " km/h";
+					let timestamp = (wp.timestamp_log ? wp.timestamp_log : wp.timestamp_server);
+					let speed = null;
+					let ele = null;
+					let sender = null;
+					if (wp.speed) speed = Number(parseFloat(wp.speed) * 3.6).toFixed(1) + " km/h";
+					if (wp.altitude) ele = Number(parseFloat(wp.altitude)).toFixed(1) + " m";
+					if (wp.sender) sender = wp.sender;
+
+					// Info panel in the bottom-right corner
+					cur_info_container_obj.style.display = "block";
+					cur_sender_obj.innerText = sender ? sender : 'unknown';
+					cur_timestamp_obj.innerText = timestamp;
+					cur_speed_obj.innerText = speed ? speed : 'unknown';
+					cur_ele_obj.innerText = ele ? ele : 'unknown';
+
+					// Info for popup
+					infoContent = '';
+					if (sender) infoContent += sender;
+					infoContent += (infoContent.length > 0 ? '<br>' : '') + timestamp;
+					if (speed) infoContent += '<br>' + speed;
+					if (ele) infoContent += '<br>' + ele;
 				}
-				// debug_test_obj.innerHTML = infoContent;
 
 				if (click && !alt) {
 					// Click without alt but in tolerance lead to track-popup

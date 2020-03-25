@@ -41,5 +41,6 @@
     }
     $res->close();
 
+    header("Access-Control-Allow-Origin: *");
     header('Content-Type: application/json');
     echo substr($output, 0, strlen($output) - 1) . "]";
