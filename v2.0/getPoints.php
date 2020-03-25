@@ -3,6 +3,7 @@
 
     // Whether the whole table should be sent or only few last updates
     $starting = isset($_GET['starting']) ? $_GET['starting'] : null;
+    $ending = isset($_GET['ending']) ? $_GET['ending'] : null;
 
     // Connect to database
     $conn = new mysqli($dbHost, $dbUser, $dbPassword, $dbName);
@@ -12,9 +13,13 @@
     }
 
     $sql = "SELECT * FROM osmand_online";
-    if ($starting)
-        $sql = $sql . " WHERE uid > " . $starting;
-	$res = $conn->query($sql);
+
+    if ($starting || $ending) $sql .= " WHERE";
+    if ($starting) $sql .= " uid > " . $starting . ' AND';
+    if ($ending) $sql .= " uid < " . $ending . ' AND';
+    if ($starting || $ending) $sql = substr($sql, 0, strlen($sql) - 4);
+	
+    $res = $conn->query($sql);
 
 	if ($res->num_rows === 0) {
 	    echo "[]";

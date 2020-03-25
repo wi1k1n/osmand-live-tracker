@@ -1,17 +1,14 @@
 // Simply makes an AJAX request
 var getJSON = function(url, callback) {
-    var xhr = new XMLHttpRequest();
-	    xhr.open('GET', url, true);
-	    xhr.responseType = 'json';
-	    xhr.onload = function() {
-	        var status = xhr.status;
-	        if (status === 200) {
-	            callback(null, xhr.response);
-	        } else {
-	            callback(status);
-	        }
-	    };
-	    xhr.send();
+    let xhr = new XMLHttpRequest();
+	xhr.open('GET', url, true);
+	xhr.responseType = 'json';
+	xhr.onload = function() {
+		let status = xhr.status;
+		if (status === 200) callback(null, xhr.response);
+		else callback(status);
+	};
+	xhr.send();
 };
 var getFormattedDate = function() {
 	let d = new Date();
@@ -22,13 +19,49 @@ var getFormattedDate = function() {
 // Takes waypoints dictionary and returns lon/lat array
 var waypoints2coords = function(wps) {
 	let coords = [wps.length];
-	let ele = [wps.length];
 	for (let i = 0; i < wps.length; i++) {
 		coords[i] = [wps[i]['lon'], wps[i]['lat']];
-		ele[i] = wps[i]['ele'];
 	}
-	return [coords, ele];
+	return coords;
 };
+
+var findClosestSegment = function(coords, pt) {
+	// Takes list of coords and point, and tries to find best segment for this point
+	function dist2segment(pt1, pt2, m) {
+		// returns [t, d, p]; where:
+		// t \in [0, 1] if projection of m onto pt2-pt1 is on pt2-pt1: coefficient from pt1
+		// d - distance from m to pt2-pt1
+		// and p is [x, y] - point of projection
+		function dotProduct(p1, p2) { return p1[0]*p2[0] + p1[1]*p2[1]; }
+		function sqr(x) { return x * x; }
+		function dst2(p1, p2) { return sqr(p2[0] - p1[0]) + sqr(p2[1] - p1[1]); }
+		function norm(p) { return Math.sqrt(dst2([0, 0], p))}
+		let pt1m = [m[0] - pt1[0], m[1] - pt1[1]]; // vector from pt1 to mouse
+		let pt12 = [pt2[0] - pt1[0], pt2[1] - pt1[1]]; // vector from pt1 to pt2
+		let t = dotProduct(pt1m, pt12) / dst2(pt1, pt2); // coefficient of pt12 to get projection point x
+		let pt1x = [t * pt12[0], t * pt12[1]]; // vector from pt1 to projection point x
+		let xm = [pt1m[0] - pt1x[0], pt1m[1] - pt1x[1]]; // norm from pt12 to m
+		let d = norm(xm); // distance from m to pt12
+		let p = [pt1[0] + pt1x[0], pt1[1] + pt1x[1]]; // point x of projection m onto pt12
+		return [t, d, p];
+	}
+	let minDst = Infinity;
+	let bestInd = null;
+	let bestT = null;
+	for (let i = 0; i < coords.length - 1; i++) {
+		let cur = dist2segment(coords[i], coords[i+1], pt);
+		if (cur[0] >= 0 && cur[0] <= 1) {
+			if (cur[1] < minDst) {
+				minDst = cur[1];
+				bestInd = i;
+				bestT = cur[0];
+			}
+		}
+	}
+	return [bestInd, bestT];
+};
+
+
 
 // Styles for map
 var styleTrack = new ol.style.Style({
@@ -66,3 +99,32 @@ var styleCursor = new ol.style.Style({
 		}),
 	})
 });
+
+var CustomControl = (function (Control) {
+	function CustomControl(opt_options) {
+		var options = opt_options || {};
+
+		var button = document.createElement('button');
+		button.innerHTML = options.label ? options.label : 'C';
+
+		var element = document.createElement('div');
+		element.className = (options.className ? options.className : 'ol-control-custom') + ' ol-unselectable ol-control';
+		element.appendChild(button);
+
+		var callback = options.callback ? options.callback : function() { };
+
+		Control.call(this, {
+			element: element,
+			target: options.target
+		});
+
+		// button.addEventListener('click', this.handleRotateNorth.bind(this), false);
+		button.addEventListener('click', callback, false);
+	}
+
+	if ( ol.control.Control ) CustomControl.__proto__ = ol.control.Control;
+	CustomControl.prototype = Object.create( ol.control.Control && ol.control.Control.prototype );
+	CustomControl.prototype.constructor = CustomControl;
+
+	return CustomControl;
+}(ol.control.Control));

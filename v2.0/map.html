@@ -8,6 +8,21 @@
 				width: 100%;
 			}
 
+			.ol-control-custom {
+				top: 65px;
+				left: .5em;
+			}
+			.ol-touch .ol-control-custom {
+				top: 80px;
+			}
+
+			/*.ol-control-home {*/
+			/*}*/
+			.ol-control-marker {
+				top: 95px;
+				left: .5em;
+			}
+
 			.column {
 				float: left;
 				width: 50%;
@@ -27,7 +42,7 @@
 <body>
 	<div class="row">
 		<div class="column">
-			<h2>Track my bike</h2>
+<!--			<h2>Track my bike</h2>-->
 			<div>Time at marker position: <span id="time_at_marker">unknown</span></div>
 			<div>Speed at marker position: <span id="speed_at_marker">unknown</span></div>
 			<div style="color: gray;">Last refresh: <span id="last_refresh">unknown</span></div>
@@ -55,7 +70,6 @@
 
 		var waypoints = []; // Originally downloaded JSON
 		var coords = []; // lon/lat array for showing track on map
-		var ele = [];
 		var projectFunction = ol.proj.getTransform('EPSG:4326', 'EPSG:3857');
 
 		var sourceTrack = new ol.source.Vector({}); // source for track
@@ -63,46 +77,51 @@
 		var trackLine = new ol.geom.LineString([]); // ol.geom.LineString instance for track
 		var markerPoint = new ol.geom.Point([]); // ol.geom.Point instance for marker
 
-		sourceTrack.addFeature(new ol.Feature({
-			geometry: trackLine,
-		}));
+		sourceTrack.addFeature(new ol.Feature(trackLine));
 		sourceMarker.addFeature(new ol.Feature(markerPoint));
 
+		function centerMapOnTrack() {
+			map.getView().fit(trackLine, {padding: [100, 100, 100, 100]});
+		}
+		function centerMapOnMarker() {
+			let view = map.getView();
+			view.setCenter(trackLine.getLastCoordinate());
+			view.setZoom(15);
+		}
 		var updateWaypoints = function(centerTrack=false) {
 			// console.log('updateWaypoints');
 			let url = URL_GETPOINTS;
 			if (waypoints.length > 0)  url += '?starting=' + waypoints[waypoints.length-1]['uid'];
+			// <DEBUG>
+			// url = URL_GETPOINTS + '?starting=20&ending=30';
+			// </DEBUG>
 			getJSON(url,  function(err, data) {
 				if (err != null || data == null) {
 					alert('Could not update data!');
 					console.error(err);
 					return;
 				}
-				if (data.length === 0) // no new data
-					return;
+				if (data.length > 0) { // new data exists
+					// Preprocess received data
+					let waypoints_upd = data.sort(function(a, b) { return a.uid - b.uid}); // Sort ascending
+					let coords_upd = waypoints2coords(waypoints_upd); // prepare lon/lat array
+					let coordsTransformed_upd = projectFunction(coords_upd);
 
-				// Preprocess received data
-				let waypoints_upd = data.sort(function(a, b) { return a.uid - b.uid}); // Sort ascending
-				let coords_upd = waypoints2coords(waypoints_upd); // prepare lon/lat array
+					// Concatenate with already existing data
+					waypoints = waypoints.concat(waypoints_upd);
+					coords = coords.concat(coords_upd);
 
-				// Concatenate with already existing data
-				waypoints = waypoints.concat(waypoints_upd);
-				coords = coords.concat(coords_upd[0]);
-				ele = ele.concat(coords_upd[1]);
+					// Update track
+					trackLine.setCoordinates(coords);
+					trackLine.applyTransform(projectFunction);
 
-				// Update track
-				trackLine.setCoordinates(coords);
-				trackLine.applyTransform(projectFunction);
+					// Update marker
+					markerPoint.setCoordinates(ol.proj.fromLonLat(coords[coords.length-1]));
 
-				// Update marker
-				markerPoint.setCoordinates(ol.proj.fromLonLat(coords[coords.length-1]));
+					// Center map on track
+					if (!waypoints || centerTrack) centerMapOnTrack();
 
-				// Center map on track
-				if (!waypoints.length || centerTrack)
-					map.getView().fit(trackLine, {padding: [100, 100, 100, 100]});
-
-				// Update info on page
-				if (waypoints.length) {
+					// Update info on page
 					let lwp = waypoints[waypoints.length - 1]; // last waypoint
 					// Update last_update
 					if (lwp.timestamp_log)  time_at_marker_obj.innerText = lwp.timestamp_log;
@@ -148,15 +167,20 @@
 				zoom: 4
 			}),
 			controls: ol.control.defaults().extend([
-					new ol.control.ZoomToExtent({
-						extent: [
-							813079.7791264898, 5929220.284081122,
-							848966.9639063801, 5936863.986909639
-						]
+					new CustomControl({
+						label: '⯐',
+						className: 'ol-control-marker ol-control-custom',
+						callback: centerMapOnMarker
+					}),
+					new CustomControl({
+						label: '⌂',
+						className: 'ol-control-home ol-control-custom',
+						callback: centerMapOnTrack
 					})
 			])
 		});
-		map.addControl(new ol.control.ScaleLine());
+		map.addControl(new ol.control.ScaleLine({bar: true, text: false}));
+		map.addControl(new ol.control.FullScreen());
 
 		// Autorefresh part
 		var refresh_interval_obj = document.getElementById('refresh_interval');
@@ -181,6 +205,7 @@
 			}
 		}; setUpdateInterval();
 
+		// Cursor part
 		var cursor = null;
 		// Pointer onMouseMove
 		var displayCursor = function(coord) {
@@ -188,11 +213,27 @@
 			if (Math.sqrt(Math.pow(closestPoint[0] - coord[0], 2) + Math.pow(closestPoint[1] - coord[1], 2)) > CURSOR_TOLERANCE) {
 				cursor = null;
 				map.render();
+				debug_test_obj.innerHTML = '';
 				return;
 			}
 			if (cursor === null)  cursor = new ol.geom.Point(closestPoint);
 			else cursor.setCoordinates(closestPoint);
 			map.render();
+
+			// Trying to find closest segment of trackLine
+			let closestSegment = findClosestSegment(trackLine.getCoordinates(), closestPoint);
+			let ind = closestSegment[0];
+			let t = closestSegment[1];
+
+			if (ind && t) { // Updating info on page if found
+				let wp = waypoints[ind];
+				let content = (wp.timestamp_log ? wp.timestamp_log : wp.timestamp_server);
+				if (wp.speed) content += '  ' + Number(parseFloat(wp.speed) * 3.6).toFixed(1) + " km/h";
+
+				debug_test_obj.innerHTML = content;
+			} else {
+				debug_test_obj.innerHTML = '';
+			}
 		};
 		map.on('pointermove', function(evt) {
 			if (evt.dragging) return;
@@ -200,13 +241,6 @@
 			displayCursor(coord);
 		});
 		map.on('click', function(evt) {
-
-			var features = [];
-			map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
-				features.push(feature);
-			});
-			console.log(features);
-
 			displayCursor(evt.coordinate);
 		});
 
