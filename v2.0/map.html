@@ -4,10 +4,22 @@
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/css/ol.css" type="text/css">
 		<style>
 			.map {
-				height: 600px;
+				height: 550px;
 				width: 100%;
+				padding: 5px;
 			}
 
+			table {
+				border: 1px solid black;
+			}
+			th, td {
+				padding: 1px;
+			}
+			th {
+				text-align: left;
+			}
+
+			/* === Custom control buttons === */
 			.ol-control-custom {
 				top: 65px;
 				left: .5em;
@@ -15,9 +27,6 @@
 			.ol-touch .ol-control-custom {
 				top: 80px;
 			}
-
-			/*.ol-control-home {*/
-			/*}*/
 			.ol-control-marker {
 				top: 95px;
 				left: .5em;
@@ -26,16 +35,61 @@
 				top: 118px;
 			}
 
+			/* === 2 column layout === */
 			.column {
 				float: left;
 				width: 50%;
 			}
-
 			/* Clear floats after the columns */
 			.row:after {
 				content: "";
 				display: table;
 				clear: both;
+			}
+
+			/* === Cursor popup === */
+			.ol-popup {
+				position: absolute;
+				background-color: white;
+				box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+				/*padding-left: 15px;*/
+				/*padding-bottom: 15px;*/
+				padding: 10px;
+				border-radius: 10px;
+				border: 1px solid #cccccc;
+				bottom: 12px;
+				left: -50px;
+				min-width: 180px;
+			}
+			.ol-popup:after, .ol-popup:before {
+				top: 100%;
+				border: solid transparent;
+				content: " ";
+				height: 0;
+				width: 0;
+				position: absolute;
+				pointer-events: none;
+			}
+			.ol-popup:after {
+				border-top-color: white;
+				border-width: 10px;
+				left: 48px;
+				margin-left: -10px;
+			}
+			.ol-popup:before {
+				border-top-color: #cccccc;
+				border-width: 11px;
+				left: 48px;
+				margin-left: -11px;
+			}
+			.ol-popup-closer {
+				text-decoration: none;
+				position: absolute;
+				top: 2px;
+				right: 8px;
+			}
+			.ol-popup-closer:after {
+				content: "✖";
 			}
 		</style>
 		<script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/build/ol.js"></script>
@@ -43,30 +97,38 @@
 		<title>v2.0</title>
 	</head>
 <body>
+	<h3>Track my bike v2.0</h3>
 	<div class="row">
 		<div class="column">
-<!--			<h2>Track my bike</h2>-->
-			<div>Time at marker position: <span id="time_at_marker">unknown</span></div>
-			<div>Speed at marker position: <span id="speed_at_marker">unknown</span></div>
-			<div style="color: gray;">Last refresh: <span id="last_refresh">unknown</span></div>
+			<table>
+				<tr><th>Track started at: </th><th id="time_on_start"></th></tr>
+				<tr><th>Time at marker: </th><th id="time_at_marker"></th></tr>
+				<tr><th>Speed at marker: </th><th id="speed_at_marker"></th></tr>
+				<tr><th>Total distance: </th><th id="dst_travelled"></th></tr>
+				<tr style="color: gray;"><th>Last refresh: </th><th id="last_refresh"></th></tr>
+			</table>
 		</div>
 		<div class="column">
 			<div>
-				<label for="refresh_interval">Choose refreshing interval:</label>
-				<select id="refresh_interval">
-					<option value="-1">No refresh</option>
+				<label for="refresh_interval">Refresh interval:</label>
+				<select id="refresh_interval" style="width: auto;">
+					<option value="-1">Never</option>
 					<option value="5000">5s</option>
 					<option value="30000">30s</option>
 					<option value="60000">1m</option>
 					<option value="120000" selected>2m</option>
 					<option value="300000">5m</option>
-				</select>
+				</select><br>
 				<button id="update_btn">Manual update</button>
 			</div>
 			<div id="test"></div>
 		</div>
 	</div>
 	<div id="map" class="map"></div>
+	<div id="popup" class="ol-popup">
+		<a href="#" id="popup-closer" class="ol-popup-closer"></a>
+		<div id="popup-content"></div>
+	</div>
 	<script type="text/javascript">
 		const URL_GETPOINTS = 'http://batukah.000webhostapp.com/osholm/v2.0/getPoints.php';
 		const CURSOR_TOLERANCE = 5000;
@@ -94,7 +156,7 @@
 		var updateWaypoints = function(centerTrack=false) {
 			// console.log('updateWaypoints');
 			let url = URL_GETPOINTS;
-			if (waypoints.length > 0)  url += '?starting=' + waypoints[waypoints.length-1]['uid'];
+			if (waypoints.length > 0) url += '?starting=' + waypoints[waypoints.length-1]['uid'];
 			// <DEBUG>
 			// url = URL_GETPOINTS + '?starting=20&ending=30';
 			// </DEBUG>
@@ -124,15 +186,22 @@
 					// Center map on track
 					if (!waypoints || centerTrack) centerMapOnTrack();
 
-					// Update info on page
+					// ======= Update info on page =======
 					let lwp = waypoints[waypoints.length - 1]; // last waypoint
+
+					// Update track_started_at info
+					if (lwp.timestamp_log) time_on_start_obj.innerText = waypoints[0].timestamp_log;
+					else if (lwp.timestamp_server) time_on_start_obj.innerText = waypoints[0].timestamp_server + ' (request time)';
+					else time_on_start_obj.innerText = "unknown";
 					// Update last_update
-					if (lwp.timestamp_log)  time_at_marker_obj.innerText = lwp.timestamp_log;
-					else if (lwp.timestamp_server)  time_at_marker_obj.innerText = lwp.timestamp_server + ' (request time)';
+					if (lwp.timestamp_log) time_at_marker_obj.innerText = lwp.timestamp_log;
+					else if (lwp.timestamp_server) time_at_marker_obj.innerText = lwp.timestamp_server + ' (request time)';
 					else time_at_marker_obj.innerText = "unknown";
 					// Update current_speed
 					if (lwp.speed)  speed_at_marker_obj.innerText = Number(parseFloat(lwp.speed) * 3.6).toFixed(1) + " km/h";
 					else speed_at_marker_obj.innerText = "unknown";
+					// Update travelled distance
+					dst_travelled_obj.innerText = formatLength(trackLine);
 				}
 
 				// Update last_update info
@@ -145,6 +214,29 @@
 			updateWaypoints();
 			setUpdateInterval();
 		});
+
+		// Popup on cursor
+		var popupContainer = document.getElementById('popup');
+		var popupContent = document.getElementById('popup-content');
+		var popupCloser = document.getElementById('popup-closer');
+
+		var cursorOverlay = new ol.Overlay({
+			element: popupContainer,
+			autoPan: true,
+			autoPanAnimation: {
+				duration: 10
+			}
+		});
+		function closePopup() {
+			cursorOverlay.setPosition(undefined);
+			popupCloser.blur();
+			arbitraryPopup = false;
+		}
+		popupCloser.onclick = function() {
+			closePopup();
+			return false;
+		};
+
 
 		var layerTrack = new ol.layer.Vector({
 			name: 'Track',
@@ -180,7 +272,8 @@
 						className: 'ol-control-home ol-control-custom',
 						callback: centerMapOnTrack
 					})
-			])
+			]),
+			overlays: [cursorOverlay]
 		});
 		map.addControl(new ol.control.ScaleLine({bar: true, text: false}));
 		map.addControl(new ol.control.FullScreen());
@@ -188,7 +281,9 @@
 		// Autorefresh part
 		var refresh_interval_obj = document.getElementById('refresh_interval');
 		var time_at_marker_obj = document.getElementById('time_at_marker');
+		var time_on_start_obj = document.getElementById('time_on_start');
 		var speed_at_marker_obj = document.getElementById('speed_at_marker');
+		var dst_travelled_obj = document.getElementById('dst_travelled');
 		var last_refresh_obj = document.getElementById('last_refresh');
 
 		var debug_test_obj = document.getElementById('test');
@@ -210,32 +305,55 @@
 
 		// Cursor part
 		var cursor = null;
+		var arbitraryPopup = false; // true, if popup shows non-track point atm. needed to trigger closePopup() correctly
 		// Pointer onMouseMove
-		var displayCursor = function(coord) {
-			var closestPoint = trackLine.getClosestPoint(coord);
+		var displayCursor = function(coord, click=false, alt=false) {
+			let closestPoint = trackLine.getClosestPoint(coord);
 			if (Math.sqrt(Math.pow(closestPoint[0] - coord[0], 2) + Math.pow(closestPoint[1] - coord[1], 2)) > CURSOR_TOLERANCE) {
+				// Cursor not in tolerance
 				cursor = null;
 				map.render();
 				debug_test_obj.innerHTML = '';
-				return;
-			}
-			if (cursor === null)  cursor = new ol.geom.Point(closestPoint);
-			else cursor.setCoordinates(closestPoint);
-			map.render();
-
-			// Trying to find closest segment of trackLine
-			let closestSegment = findClosestSegment(trackLine.getCoordinates(), closestPoint);
-			let ind = closestSegment[0];
-			let t = closestSegment[1];
-
-			if (ind && t) { // Updating info on page if found
-				let wp = waypoints[ind];
-				let content = (wp.timestamp_log ? wp.timestamp_log : wp.timestamp_server);
-				if (wp.speed) content += '  ' + Number(parseFloat(wp.speed) * 3.6).toFixed(1) + " km/h";
-
-				debug_test_obj.innerHTML = content;
+				// If not in tolerance and no alt (i.e. track point request) ~ ordinary click on map -> close popup
+				if (click && !alt) {
+					closePopup();
+				}
 			} else {
-				debug_test_obj.innerHTML = '';
+				// Cursor in tolerance
+				if (cursor === null)  cursor = new ol.geom.Point(closestPoint);
+				else cursor.setCoordinates(closestPoint);
+				map.render();
+
+				// Trying to find closest segment of trackLine
+				let closestSegment = findClosestSegment(trackLine.getCoordinates(), closestPoint);
+				let ind = closestSegment[0];
+				let t = closestSegment[1];
+
+				let wp = null;
+				if (ind && t)  wp = waypoints[ind];
+
+				let infoContent = '';
+				if (wp) { // Updating info on page if found
+					infoContent = (wp.timestamp_log ? wp.timestamp_log : wp.timestamp_server);
+					if (wp.speed) infoContent += '<br>' + Number(parseFloat(wp.speed) * 3.6).toFixed(1) + " km/h";
+				}
+				// debug_test_obj.innerHTML = infoContent;
+
+				if (click && !alt) {
+					// Click without alt but in tolerance lead to track-popup
+					let hdms = ol.coordinate.toStringHDMS(ol.proj.toLonLat(closestPoint)).replace(/\s/g, '').replace(/N/g, 'N ');
+					popupContent.innerHTML = '<code>' + hdms + '</code>';
+					popupContent.innerHTML += '<p>' + infoContent + '</p>';
+					arbitraryPopup = false;
+					cursorOverlay.setPosition(closestPoint);
+				}
+			}
+			if (click && alt) {
+				// Independently of tolerance, if alt used with click, showing coordinate of exact click position
+				let hdms = ol.coordinate.toStringHDMS(ol.proj.toLonLat(coord)).replace(/\s/g, '').replace(/N/g, 'N ');
+				popupContent.innerHTML = '<code>' + hdms + '</code>';
+				arbitraryPopup = true;
+				cursorOverlay.setPosition(coord);
 			}
 		};
 		map.on('pointermove', function(evt) {
@@ -245,6 +363,9 @@
 		});
 		map.on('click', function(evt) {
 			displayCursor(evt.coordinate);
+		});
+		map.on('singleclick', function(evt) {
+			displayCursor(evt.coordinate, true, evt.originalEvent.altKey);
 		});
 
 		layerTrack.on('postrender', function(evt) {
