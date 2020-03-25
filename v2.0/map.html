@@ -36,7 +36,7 @@
 			}
 			.ol-control-panel {
 				width: 180px;
-				height: 75px;
+				height: 100px;
 				left: unset;
 				top: unset;
 				right: 8px;
@@ -146,6 +146,7 @@
 		<div>Time: <span id="cur_timestamp"></span></div>
 		<div>Speed: <span id="cur_speed"></span></div>
 		<div>Altitude: <span id="cur_ele"></span></div>
+		<div>Distance: <span id="cur_dst"></span></div>
 	</div>
 	<script type="text/javascript">
 		const URL_GETPOINTS = 'http://batukah.000webhostapp.com/osholm/v2.0/getPoints.php';
@@ -225,7 +226,7 @@
 					if (lwp.speed)  speed_at_marker_obj.innerText = Number(parseFloat(lwp.speed) * 3.6).toFixed(1) + " km/h";
 					else speed_at_marker_obj.innerText = "unknown";
 					// Update travelled distance
-					dst_travelled_obj.innerText = formatLength(trackLine);
+					dst_travelled_obj.innerText = formatLineStringLnegth(trackLine);
 				}
 
 				// Update last_update info
@@ -313,6 +314,7 @@
 		var cur_timestamp_obj = document.getElementById('cur_timestamp');
 		var cur_speed_obj = document.getElementById('cur_speed');
 		var cur_ele_obj = document.getElementById('cur_ele');
+		var cur_dst_obj = document.getElementById('cur_dst');
 
 		// Autorefresh part
 		var refresh_interval = parseInt(refresh_interval_obj.options[refresh_interval_obj.selectedIndex].value);
@@ -361,7 +363,20 @@
 				if (ind && t)  wp = waypoints[ind];
 
 				let infoContent = '';
-				if (wp) { // Updating info on page if found
+				if (wp) {
+					// Calculated distance so far
+					let cursorTrack = new ol.geom.LineString(coords.slice(0, ind + 1));
+					cursorTrack.applyTransform(projectFunction);
+					// Considering that wp can be in the middle of last segment
+					let crds = cursorTrack.getCoordinates();
+					let l = crds[crds.length-1], lp = crds[crds.length-2];
+					let dxy = [l[0]-lp[0], l[1]-lp[1]];
+					crds[crds.length-1] = [lp[0] + t*dxy[0], lp[1] + t*dxy[1]];
+					cursorTrack.setCoordinates(crds);
+					// Calculating distance itself
+					let dst = ol.sphere.getLength(cursorTrack);
+
+					// Updating info on page if found
 					let timestamp = (wp.timestamp_log ? wp.timestamp_log : wp.timestamp_server);
 					let speed = null;
 					let ele = null;
@@ -376,6 +391,7 @@
 					cur_timestamp_obj.innerText = timestamp;
 					cur_speed_obj.innerText = speed ? speed : 'unknown';
 					cur_ele_obj.innerText = ele ? ele : 'unknown';
+					cur_dst_obj.innerText = formatDistance(dst);
 
 					// Info for popup
 					infoContent = '';

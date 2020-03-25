@@ -66,21 +66,23 @@ var findClosestSegment = function(coords, pt) {
  * @param {LineString} line The line.
  * @return {string} The formatted length.
  */
-var formatLength = function(line) {
-	var length = ol.sphere.getLength(line);
-	var output;
-	if (length > 100) {
-		output = (Math.round(length / 1000 * 100) / 100) +
-			' ' + 'km';
+var formatLineStringLnegth = function(line) {
+	let length = ol.sphere.getLength(line);
+	return formatDistance(length);
+};
+var formatDistance = function(dst) {
+	let output;
+	if (dst > 500) {
+		output = (Math.round(dst / 1000 * 100) / 100) + ' ' + 'km';
 	} else {
-		output = (Math.round(length * 100) / 100) +
-			' ' + 'm';
+		output = (Math.round(dst * 100) / 100) + ' ' + 'm';
 	}
 	return output;
 };
 
 
 
+var 
 // Styles for map
 var styleTrack = new ol.style.Style({
 	stroke: new ol.style.Stroke({
