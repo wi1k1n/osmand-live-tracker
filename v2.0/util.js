@@ -79,7 +79,11 @@ var formatDistance = function(dst) {
 	}
 	return output;
 };
-
+var categorizeHDOP = function(hdop) {
+	if (hdop < 4) return 0;
+	else if (hdop < 13) return 1;
+	else return 2;
+}
 
 
 // Styles for map

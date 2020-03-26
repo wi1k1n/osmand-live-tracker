@@ -151,8 +151,10 @@
 	</div>
 	<script type="text/javascript">
 		const URL_GETPOINTS = 'http://batukah.000webhostapp.com/osholm/v2.0/getPoints.php';
-		const CURSOR_TOLERANCE = 5000;
+		const CURSOR_TOLERANCE = 4000;
 		const DEBUG = false;
+		const HDOP_TITLES = ['Very accurate', 'Good accuracy', 'Poor accuracy'];
+		const HDOP_COLORS = ['green', 'rgb(180,162,33)', 'red'];
 
 		var waypoints = []; // Originally downloaded JSON
 		var coords = []; // lon/lat array for showing track on map
@@ -364,6 +366,7 @@
 				if (ind && t)  wp = waypoints[ind];
 
 				let infoContent = '';
+				let hdopCat = null; // hdop category: 0, 1 or 2
 				if (wp) {
 					// Calculated distance so far
 					let cursorTrack = new ol.geom.LineString(coords.slice(0, ind + 1));
@@ -382,9 +385,13 @@
 					let speed = null;
 					let ele = null;
 					let sender = null;
+					let hdop = null;
 					if (wp.speed) speed = Number(parseFloat(wp.speed) * 3.6).toFixed(1) + " km/h";
 					if (wp.altitude) ele = Number(parseFloat(wp.altitude)).toFixed(1) + " m";
 					if (wp.sender) sender = wp.sender;
+					if (wp.hdop) hdop = wp.hdop;
+
+					if (hdop) hdopCat = categorizeHDOP(hdop);
 
 					// Info panel in the bottom-right corner
 					cur_info_container_obj.style.display = "block";
@@ -406,7 +413,8 @@
 				if (click && !alt) {
 					// Click without alt but in tolerance lead to track-popup
 					let hdms = ol.coordinate.toStringHDMS(ol.proj.toLonLat(closestPoint)).replace(/\s/g, '').replace(/N/g, 'N ');
-					popupContent.innerHTML = '<code>' + hdms + '</code>';
+					if (hdopCat != null) popupContent.innerHTML = '<code title="'+HDOP_TITLES[hdopCat]+'" style="color: '+HDOP_COLORS[hdopCat]+';">' + hdms + '</code>';
+					else  popupContent.innerHTML = '<code>' + hdms + '</code>';
 					popupContent.innerHTML += '<p>' + infoContent + '</p>';
 					arbitraryPopup = false;
 					cursorOverlay.setPosition(closestPoint);
