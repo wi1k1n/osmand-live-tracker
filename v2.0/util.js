@@ -18,11 +18,12 @@ var getFormattedDate = function() {
 
 // Takes waypoints dictionary and returns lon/lat array
 var waypoints2coords = function(wps) {
-	let coords = [wps.length];
-	for (let i = 0; i < wps.length; i++) {
-		coords[i] = [wps[i]['lon'], wps[i]['lat']];
-	}
-	return coords;
+	return wps.map(x => [x['lon'], x['lat']]);
+	// let coords = [wps.length];
+	// for (let i = 0; i < wps.length; i++) {
+	// 	coords[i] = [wps[i]['lon'], wps[i]['lat']];
+	// }
+	// return coords;
 };
 
 var findClosestSegment = function(coords, pt) {
@@ -48,6 +49,7 @@ var findClosestSegment = function(coords, pt) {
 	let minDst = Infinity;
 	let bestInd = null;
 	let bestT = null;
+	// TODO: may be using coords.findIndex(..) is faster
 	for (let i = 0; i < coords.length - 1; i++) {
 		let cur = dist2segment(coords[i], coords[i+1], pt);
 		if (cur[0] >= 0 && cur[0] <= 1) {
@@ -83,7 +85,7 @@ var categorizeHDOP = function(hdop) {
 	if (hdop < 4) return 0;
 	else if (hdop < 13) return 1;
 	else return 2;
-}
+};
 
 
 // Styles for map

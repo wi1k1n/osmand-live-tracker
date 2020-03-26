@@ -4,162 +4,15 @@
 <!-- TODO: automatically separate tracks (probably on server side) by delay in timestamps and draw them separately -->
 <html lang="en">
 	<head>
+		<link rel="icon" type="image/png" href="img/pinc_32.png">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/css/ol.css" type="text/css">
-		<style>
-			body {
-				width: 100%;
-				/*height: 100%;*/
-				overflow: hidden; /* Hide scrollbars */
-				margin: unset;
-			}
-			.map {
-				height: 1px;
-				min-height: 100vh;
-				/*min-width: 94vw;*/
-				width: 100%;
-				/*padding: 5px;*/
-			}
-
-			table {
-				border: 1px solid black;
-			}
-			th, td {
-				padding: 1px;
-			}
-			th {
-				text-align: left;
-			}
-
-			/* === Custom control buttons === */
-			/* Home button */
-			.ol-control-custom {
-				top: 65px;
-				left: .5em;
-			}
-			.ol-touch .ol-control-custom {
-				top: 80px;
-			}
-			/* Marker button */
-			.ol-control-marker {
-				top: 95px;
-				left: .5em;
-			}
-			.ol-touch .ol-control-marker {
-				top: 118px;
-			}
-			/* Cursor info panel */
-			.ol-control-panel {
-				width: 180px;
-				height: auto;
-				left: unset;
-				top: unset;
-				right: 8px;
-				bottom: 24px;
-				background-color: rgba(177, 119, 255, 0.8);
-				display: none;
-			}
-			.ol-control-panel:hover {
-				background-color: rgba(177, 119, 255, 0.8);
-			}
-			/* Track info table */
-			.ol-control-table {
-				width: auto;
-				height: auto;
-				left: unset;
-				bottom: unset;
-				right: 40px;
-				top: 8px;
-				background-color: rgba(167, 255, 217, 0.8);
-				display: block;
-			}
-			.ol-control-table:hover {
-				background-color: rgba(167, 255, 217, 0.8);
-			}
-			/* Refresh panel */
-			.ol-control-refresh {
-				width: auto;
-				height: auto;
-				right: unset;
-				bottom: unset;
-				left: 40px;
-				top: 8px;
-				background-color: rgba(167, 255, 217, 0.8);
-				/*display: block;*/
-			}
-			.ol-control-refresh:hover {
-				background-color: rgba(167, 255, 217, 0.8);
-			}
-
-
-			/* === 2 column layout === */
-			.column {
-				float: left;
-				width: 33.3%;
-			}
-			/* Clear floats after the columns */
-			.row:after {
-				content: "";
-				display: table;
-				clear: both;
-			}
-
-			/* === Cursor popup === */
-			.ol-popup {
-				position: absolute;
-				background-color: white;
-				box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-				/*padding-left: 15px;*/
-				/*padding-bottom: 15px;*/
-				padding: 10px;
-				border-radius: 10px;
-				border: 1px solid #cccccc;
-				bottom: 12px;
-				left: -50px;
-				min-width: 180px;
-			}
-			.ol-popup:after, .ol-popup:before {
-				top: 100%;
-				border: solid transparent;
-				content: " ";
-				height: 0;
-				width: 0;
-				position: absolute;
-				pointer-events: none;
-			}
-			.ol-popup:after {
-				border-top-color: white;
-				border-width: 10px;
-				left: 48px;
-				margin-left: -10px;
-			}
-			.ol-popup:before {
-				border-top-color: #cccccc;
-				border-width: 11px;
-				left: 48px;
-				margin-left: -11px;
-			}
-			.ol-popup-closer {
-				text-decoration: none;
-				position: absolute;
-				top: 2px;
-				right: 8px;
-			}
-			.ol-popup-closer:after {
-				content: "✖";
-			}
-		</style>
 		<script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/build/ol.js"></script>
+		<link rel="stylesheet" href="style.css" type="text/css">
 		<script src="util.js"></script>
-		<title>v2.0</title>
+        <script src="constants.js"></script>
+		<title>Track My Bike v2.0</title>
 	</head>
 <body>
-<!--	<h3>Track my bike v2.0</h3>-->
-<!--	<div class="row">-->
-<!--		<div class="column">-->
-<!--		</div>-->
-<!--		<div class="column">-->
-<!--		</div>-->
-<!--	</div>-->
 	<div id="map" class="map"></div>
 	<div id="popup" class="ol-popup">
 		<a href="#" id="popup-closer" class="ol-popup-closer"></a>
@@ -183,7 +36,6 @@
 		</table>
 	</div>
 	<div class="ol-control-refresh ol-unselectable ol-control" id="refresh_panel">
-<!--		<label for="refresh_interval">Refresh interval:</label>-->
 		<select id="refresh_interval" style="width: auto;">
 			<option value="-1">Never</option>
 			<option value="5000">5 sec</option>
@@ -194,16 +46,14 @@
 		</select>
 		<button id="update_btn">U</button>
 	</div>
+	<div class="ol-control-heightmap ol-unselectable ol-control" id="height_map_container">
+		<canvas id="height_map"></canvas>
+	</div>
 	<script type="text/javascript">
-		const URL_GETPOINTS = 'http://batukah.000webhostapp.com/osholm/v2.0/getPoints.php';
-		const CURSOR_TOLERANCE = 4000;
-		const DEBUG = false;
-		const HDOP_TITLES = ['Excellent accuracy', 'Average accuracy', 'Poor accuracy'];
-		const HDOP_COLORS = ['green', 'rgb(180,162,33)', 'red'];
-
 		var waypoints = []; // Originally downloaded JSON
 		var coords = []; // lon/lat array for showing track on map
         var currentTrack = null; // track_uid of currently shown track
+		var ele = []; // array of elevation measurements
 		var projectFunction = ol.proj.getTransform('EPSG:4326', 'EPSG:3857');
 
 		var sourceTrack = new ol.source.Vector({}); // source for track
@@ -215,7 +65,7 @@
 		sourceMarker.addFeature(new ol.Feature(markerPoint));
 
 		function centerMapOnTrack() {
-			map.getView().fit(trackLine, {padding: [100, 100, 100, 100]});
+			map.getView().fit(trackLine, {padding: [150, 100, 100, 100]});
 		}
 		function centerMapOnMarker() {
 			let view = map.getView();
@@ -265,11 +115,12 @@
 					// Preprocess received data
 					let waypoints_upd = points.sort(function(a, b) { return a.uid - b.uid}); // Sort ascending
 					let coords_upd = waypoints2coords(waypoints_upd); // prepare lon/lat array
-					let coordsTransformed_upd = projectFunction(coords_upd);
+					let ele_upd = points.map(x => x['altitude']);
 
 					// Concatenate with already existing data
 					waypoints = waypoints.concat(waypoints_upd);
 					coords = coords.concat(coords_upd);
+					ele = ele.concat(ele_upd);
 
 					// Update track
 					trackLine.setCoordinates(coords);
@@ -370,7 +221,8 @@
 				}),
 				new ol.control.Control({ element: document.getElementById('cur_info_container') }),
 				new ol.control.Control({ element: document.getElementById('info_table') }),
-				new ol.control.Control({ element: document.getElementById('refresh_panel') })
+				new ol.control.Control({ element: document.getElementById('refresh_panel') }),
+				new ol.control.Control({ element: document.getElementById('height_map_container') })
 			]),
 			overlays: [cursorOverlay]
 		});
@@ -390,6 +242,9 @@
 		var cur_ele_obj = document.getElementById('cur_ele');
 		var cur_dst_obj = document.getElementById('cur_dst');
 
+		var heightmap_obj = document.getElementById('height_map');
+		var heightmap_ctx = heightmap_obj.getContext('2d');
+
 		// Autorefresh part
 		var refresh_interval = parseInt(refresh_interval_obj.options[refresh_interval_obj.selectedIndex].value);
 		var refresh_interval_id = null;
@@ -405,6 +260,24 @@
 				refresh_interval_id = window.setInterval(updateWaypoints, refresh_interval);
 			}
 		}; setUpdateInterval();
+
+		function drawHeightmap() {
+			// let padding = [10, 10, 10, 10];
+			// let w = heightmap_obj.width, h = heightmap_obj.height;
+			// let minV = Math.min(ele), maxV = Math.max(ele);
+			// let ctx = heightmap_ctx;
+			// let wa = w - padding[1] - padding[3]; // active width
+			// let ha = h - padding[0] - padding[2]; // active height
+			// let rx = ele.length / wa;		// rate x
+			// let ry = (maxV - minV) / ha;	// rate y
+			//
+			// ctx.beginPath();
+			// ctx.moveTo(padding[3], padding[0] + padding[2]);
+			// for (let i = 1; i < ele.length; i++) {
+			// 	ctx.lineTo(padding[3] + i * rx, padding[0] + padding[2] - ele[i] * ry);
+			// }
+			// ctx.stroke();
+		}
 
 		// Cursor part
 		var cursor = null;
@@ -479,6 +352,8 @@
 					if (speed) infoContent += '<br>Speed: ' + speed;
 					if (ele) infoContent += '<br>Altitude: ' + ele;
 					infoContent += (infoContent.length > 0 ? '<br>Travelled: ' : '') + formatDistance(dst);
+
+					drawHeightmap();
 				}
 
 				if (click && !alt) {
