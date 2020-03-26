@@ -82,7 +82,6 @@ var formatDistance = function(dst) {
 
 
 
-var 
 // Styles for map
 var styleTrack = new ol.style.Style({
 	stroke: new ol.style.Stroke({

@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- TODO: add a page, where one can add smth line waypoint (lon/lat and description), which is later displayed on track -->
 <html lang="en">
 	<head>
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/css/ol.css" type="text/css">
@@ -395,10 +396,11 @@
 
 					// Info for popup
 					infoContent = '';
-					if (sender) infoContent += sender;
-					infoContent += (infoContent.length > 0 ? '<br>' : '') + timestamp;
-					if (speed) infoContent += '<br>' + speed;
-					if (ele) infoContent += '<br>' + ele;
+					if (sender) infoContent += 'Sender: ' + sender;
+					infoContent += (infoContent.length > 0 ? '<br>Time: ' : '') + timestamp;
+					if (speed) infoContent += '<br>Speed: ' + speed;
+					if (ele) infoContent += '<br>Altitude: ' + ele;
+					infoContent += (infoContent.length > 0 ? '<br>Travelled: ' : '') + formatDistance(dst);
 				}
 
 				if (click && !alt) {
