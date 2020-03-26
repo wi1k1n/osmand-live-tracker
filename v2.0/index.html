@@ -174,6 +174,7 @@
 	</div>
 	<div class="ol-control-table ol-unselectable ol-control" id="info_table">
 		<table>
+            <tr><th>Track name: </th><th id="track_name"></th></tr>
 			<tr><th>Track started at: </th><th id="time_on_start"></th></tr>
 			<tr><th>Time at marker: </th><th id="time_at_marker"></th></tr>
 			<tr><th>Speed at marker: </th><th id="speed_at_marker"></th></tr>
@@ -197,11 +198,12 @@
 		const URL_GETPOINTS = 'http://batukah.000webhostapp.com/osholm/v2.0/getPoints.php';
 		const CURSOR_TOLERANCE = 4000;
 		const DEBUG = false;
-		const HDOP_TITLES = ['Very accurate', 'Good accuracy', 'Poor accuracy'];
+		const HDOP_TITLES = ['Excellent accuracy', 'Average accuracy', 'Poor accuracy'];
 		const HDOP_COLORS = ['green', 'rgb(180,162,33)', 'red'];
 
 		var waypoints = []; // Originally downloaded JSON
 		var coords = []; // lon/lat array for showing track on map
+        var currentTrack = null; // track_uid of currently shown track
 		var projectFunction = ol.proj.getTransform('EPSG:4326', 'EPSG:3857');
 
 		var sourceTrack = new ol.source.Vector({}); // source for track
@@ -235,12 +237,33 @@
 			getJSON(url,  function(err, data) {
 				if (err != null || data == null) {
 					alert('Could not update data!');
+                    console.error('Requested url: ' + url);
 					console.error(err);
 					return;
 				}
-				if (data.length > 0) { // new data exists
+				if ('error' in data) {
+                    alert('Could not update data! Error occurred!');
+                    console.error('Requested url: ' + url);
+                    console.error(data['error']);
+                    return;
+                }
+				if (!('tracks' in data) || !('points' in data)) {
+                    alert('Loaded data is invalid!');
+                    console.error('Requested url: ' + url);
+                    console.error(data);
+                    return;
+                }
+
+				// If there is no errors, then parse data
+                let tracks = data.tracks; // Every request returns the whole table of tracks
+				// This is temporary solution while separate tracks functionality is not implemented
+				let last_track_uid = Math.max.apply(Math, tracks.map(function(o) { return o.uid; }));
+				if (currentTrack == null) currentTrack = tracks.find(x => x.uid == last_track_uid);
+				if (currentTrack.uid !== last_track_uid) alert('A newer track exists in database. Please reload the whole page!');
+				let points = data.points.filter(x => x.track_uid == currentTrack.uid);
+				if (points.length > 0) { // new data exists
 					// Preprocess received data
-					let waypoints_upd = data.sort(function(a, b) { return a.uid - b.uid}); // Sort ascending
+					let waypoints_upd = points.sort(function(a, b) { return a.uid - b.uid}); // Sort ascending
 					let coords_upd = waypoints2coords(waypoints_upd); // prepare lon/lat array
 					let coordsTransformed_upd = projectFunction(coords_upd);
 
@@ -262,6 +285,7 @@
 					let lwp = waypoints[waypoints.length - 1]; // last waypoint
 
 					// Update track_started_at info
+                    track_name_obj.innerText = currentTrack.name;
 					if (lwp.timestamp_log) time_on_start_obj.innerText = waypoints[0].timestamp_log;
 					else if (lwp.timestamp_server) time_on_start_obj.innerText = waypoints[0].timestamp_server + ' (request time)';
 					else time_on_start_obj.innerText = "unknown";
@@ -350,13 +374,10 @@
 			]),
 			overlays: [cursorOverlay]
 		});
-		// map.addControl();
-		// map.addControl(new ol.control.FullScreen());
-		// map.addControl(new ol.control.Control({ element: document.getElementById('cur_info_container') }));
-		// map.addControl(new ol.control.Control({ element: document.getElementById('info_table') }));
 
 		var refresh_interval_obj = document.getElementById('refresh_interval');
-		var time_at_marker_obj = document.getElementById('time_at_marker');
+		var track_name_obj = document.getElementById('track_name');
+        var time_at_marker_obj = document.getElementById('time_at_marker');
 		var time_on_start_obj = document.getElementById('time_on_start');
 		var speed_at_marker_obj = document.getElementById('speed_at_marker');
 		var dst_travelled_obj = document.getElementById('dst_travelled');
