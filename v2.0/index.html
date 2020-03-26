@@ -1,14 +1,23 @@
 <!DOCTYPE html>
+<!-- TODO: CURSOR_TOLERANCE is now map coordinates related; should only consider pixels -->
 <!-- TODO: add a page, where one can add smth line waypoint (lon/lat and description), which is later displayed on track -->
 <!-- TODO: automatically separate tracks (probably on server side) by delay in timestamps and draw them separately -->
 <html lang="en">
 	<head>
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/css/ol.css" type="text/css">
 		<style>
-			.map {
-				height: 550px;
+			body {
 				width: 100%;
-				padding: 5px;
+				/*height: 100%;*/
+				overflow: hidden; /* Hide scrollbars */
+				margin: unset;
+			}
+			.map {
+				height: 1px;
+				min-height: 100vh;
+				/*min-width: 94vw;*/
+				width: 100%;
+				/*padding: 5px;*/
 			}
 
 			table {
@@ -22,6 +31,7 @@
 			}
 
 			/* === Custom control buttons === */
+			/* Home button */
 			.ol-control-custom {
 				top: 65px;
 				left: .5em;
@@ -29,6 +39,7 @@
 			.ol-touch .ol-control-custom {
 				top: 80px;
 			}
+			/* Marker button */
 			.ol-control-marker {
 				top: 95px;
 				left: .5em;
@@ -36,9 +47,10 @@
 			.ol-touch .ol-control-marker {
 				top: 118px;
 			}
+			/* Cursor info panel */
 			.ol-control-panel {
 				width: 180px;
-				height: 100px;
+				height: auto;
 				left: unset;
 				top: unset;
 				right: 8px;
@@ -49,6 +61,35 @@
 			.ol-control-panel:hover {
 				background-color: rgba(177, 119, 255, 0.8);
 			}
+			/* Track info table */
+			.ol-control-table {
+				width: auto;
+				height: auto;
+				left: unset;
+				bottom: unset;
+				right: 40px;
+				top: 8px;
+				background-color: rgba(167, 255, 217, 0.8);
+				display: block;
+			}
+			.ol-control-table:hover {
+				background-color: rgba(167, 255, 217, 0.8);
+			}
+			/* Refresh panel */
+			.ol-control-refresh {
+				width: auto;
+				height: auto;
+				right: unset;
+				bottom: unset;
+				left: 40px;
+				top: 8px;
+				background-color: rgba(167, 255, 217, 0.8);
+				/*display: block;*/
+			}
+			.ol-control-refresh:hover {
+				background-color: rgba(167, 255, 217, 0.8);
+			}
+
 
 			/* === 2 column layout === */
 			.column {
@@ -112,32 +153,13 @@
 		<title>v2.0</title>
 	</head>
 <body>
-	<h3>Track my bike v2.0</h3>
-	<div class="row">
-		<div class="column">
-			<table>
-				<tr><th>Track started at: </th><th id="time_on_start"></th></tr>
-				<tr><th>Time at marker: </th><th id="time_at_marker"></th></tr>
-				<tr><th>Speed at marker: </th><th id="speed_at_marker"></th></tr>
-				<tr><th>Total distance: </th><th id="dst_travelled"></th></tr>
-				<tr style="color: gray;"><th>Last refresh: </th><th id="last_refresh"></th></tr>
-			</table>
-		</div>
-		<div class="column">
-			<div>
-				<label for="refresh_interval">Refresh interval:</label>
-				<select id="refresh_interval" style="width: auto;">
-					<option value="-1">Never</option>
-					<option value="5000">5s</option>
-					<option value="30000">30s</option>
-					<option value="60000">1m</option>
-					<option value="120000" selected>2m</option>
-					<option value="300000">5m</option>
-				</select><br>
-				<button id="update_btn">Manual update</button>
-			</div>
-		</div>
-	</div>
+<!--	<h3>Track my bike v2.0</h3>-->
+<!--	<div class="row">-->
+<!--		<div class="column">-->
+<!--		</div>-->
+<!--		<div class="column">-->
+<!--		</div>-->
+<!--	</div>-->
 	<div id="map" class="map"></div>
 	<div id="popup" class="ol-popup">
 		<a href="#" id="popup-closer" class="ol-popup-closer"></a>
@@ -149,6 +171,27 @@
 		<div>Speed: <span id="cur_speed"></span></div>
 		<div>Altitude: <span id="cur_ele"></span></div>
 		<div>Distance: <span id="cur_dst"></span></div>
+	</div>
+	<div class="ol-control-table ol-unselectable ol-control" id="info_table">
+		<table>
+			<tr><th>Track started at: </th><th id="time_on_start"></th></tr>
+			<tr><th>Time at marker: </th><th id="time_at_marker"></th></tr>
+			<tr><th>Speed at marker: </th><th id="speed_at_marker"></th></tr>
+			<tr><th>Total distance: </th><th id="dst_travelled"></th></tr>
+			<tr style="color: gray;"><th>Last refresh: </th><th id="last_refresh"></th></tr>
+		</table>
+	</div>
+	<div class="ol-control-refresh ol-unselectable ol-control" id="refresh_panel">
+<!--		<label for="refresh_interval">Refresh interval:</label>-->
+		<select id="refresh_interval" style="width: auto;">
+			<option value="-1">Never</option>
+			<option value="5000">5 sec</option>
+			<option value="30000">30 sec</option>
+			<option value="60000">1 min</option>
+			<option value="120000" selected>2 min</option>
+			<option value="300000">5 min</option>
+		</select>
+		<button id="update_btn">U</button>
 	</div>
 	<script type="text/javascript">
 		const URL_GETPOINTS = 'http://batukah.000webhostapp.com/osholm/v2.0/getPoints.php';
@@ -289,22 +332,28 @@
 				zoom: 4
 			}),
 			controls: ol.control.defaults().extend([
-					new CustomControl({
-						label: '⯐',
-						className: 'ol-control-marker ol-control-custom',
-						callback: centerMapOnMarker
-					}),
-					new CustomControl({
-						label: '⌂',
-						className: 'ol-control-home ol-control-custom',
-						callback: centerMapOnTrack
-					})
+				new ol.control.ScaleLine({bar: true, text: false}),
+				new ol.control.FullScreen(),
+				new CustomControl({
+					label: '⯐',
+					className: 'ol-control-marker ol-control-custom',
+					callback: centerMapOnMarker
+				}),
+				new CustomControl({
+					label: '⌂',
+					className: 'ol-control-home ol-control-custom',
+					callback: centerMapOnTrack
+				}),
+				new ol.control.Control({ element: document.getElementById('cur_info_container') }),
+				new ol.control.Control({ element: document.getElementById('info_table') }),
+				new ol.control.Control({ element: document.getElementById('refresh_panel') })
 			]),
 			overlays: [cursorOverlay]
 		});
-		map.addControl(new ol.control.ScaleLine({bar: true, text: false}));
-		map.addControl(new ol.control.FullScreen());
-		map.addControl(new ol.control.Control({ element: document.getElementById('cur_info_container') }));
+		// map.addControl();
+		// map.addControl(new ol.control.FullScreen());
+		// map.addControl(new ol.control.Control({ element: document.getElementById('cur_info_container') }));
+		// map.addControl(new ol.control.Control({ element: document.getElementById('info_table') }));
 
 		var refresh_interval_obj = document.getElementById('refresh_interval');
 		var time_at_marker_obj = document.getElementById('time_at_marker');
