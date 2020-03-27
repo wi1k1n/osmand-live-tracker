@@ -261,22 +261,27 @@
 			}
 		}; setUpdateInterval();
 
-		function drawHeightmap() {
-			// let padding = [10, 10, 10, 10];
-			// let w = heightmap_obj.width, h = heightmap_obj.height;
-			// let minV = Math.min(ele), maxV = Math.max(ele);
-			// let ctx = heightmap_ctx;
-			// let wa = w - padding[1] - padding[3]; // active width
-			// let ha = h - padding[0] - padding[2]; // active height
-			// let rx = ele.length / wa;		// rate x
-			// let ry = (maxV - minV) / ha;	// rate y
-			//
-			// ctx.beginPath();
-			// ctx.moveTo(padding[3], padding[0] + padding[2]);
-			// for (let i = 1; i < ele.length; i++) {
-			// 	ctx.lineTo(padding[3] + i * rx, padding[0] + padding[2] - ele[i] * ry);
-			// }
-			// ctx.stroke();
+		function drawHeightmap(ind=null) {
+			let padding = [10, 10, 10, 10];
+			let w = heightmap_obj.width, h = heightmap_obj.height;
+			let minV = Math.min.apply(null, ele), maxV = Math.max.apply(null, ele);
+			let ctx = heightmap_ctx;
+			let wa = w - padding[1] - padding[3]; // active width
+			let ha = h - padding[0] - padding[2]; // active height
+			let rx = wa / ele.length;		// rate x
+			let ry = ha / (maxV - minV);	// rate y
+
+			ctx.clearRect(0, 0, w, h);
+			ctx.beginPath();
+			ctx.moveTo(padding[3], padding[0] + ha);
+			for (let i = 1; i < ele.length; i++) {
+				ctx.lineTo(padding[3] + Math.round(i * rx), padding[0] + ha - Math.round((ele[i] - minV) * ry));
+			}
+			if (ind) {
+				ctx.moveTo(padding[3] + Math.round(ind * rx), padding[0]);
+				ctx.lineTo(padding[3] + Math.round(ind * rx), padding[0] + ha);
+			}
+			ctx.stroke();
 		}
 
 		// Cursor part
@@ -353,7 +358,7 @@
 					if (ele) infoContent += '<br>Altitude: ' + ele;
 					infoContent += (infoContent.length > 0 ? '<br>Travelled: ' : '') + formatDistance(dst);
 
-					drawHeightmap();
+					drawHeightmap(ind);
 				}
 
 				if (click && !alt) {
