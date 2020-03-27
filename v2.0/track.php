@@ -7,6 +7,7 @@
     if ($key != $secretKey) die('[Error] Invalid key');
 
     // Parse $_GET values
+    // TODO: add 'bearing' field
     $data = array(
         'lat' => isset($_GET['lat']) ? "'".floatval($_GET['lat'])."'" : 'NULL',
         'lon' => isset($_GET['lon']) ? "'".floatval($_GET['lon'])."'" : 'NULL',
