@@ -1,5 +1,5 @@
 <?php
-    require "configuration.php";
+    require "configuration_my.php";
 
     // Check secret key
     $key = isset($_GET['key']) ? $_GET['key'] : null;

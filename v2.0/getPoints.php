@@ -1,5 +1,5 @@
 <?php
-    require "configuration.php";
+    require "configuration_my.php";
 
     // Whether the whole table should be sent or only few last updates
     $starting = isset($_GET['starting']) ? $_GET['starting'] : null;
