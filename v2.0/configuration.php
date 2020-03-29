@@ -1,5 +1,5 @@
 <?php
-    global $secretKey, $filePath, $name, $zoom, $accuracy, $height, $width, $dbName, $dbUser, $dbHost, $dbPassword;
+    global $secretKey, $dbName, $dbUser, $dbHost, $dbPassword;
 
     // This key must be entered in OsmAnd's tracking URL as &key=
     $secretKey = 'CHANGEME';
