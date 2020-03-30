@@ -21,10 +21,6 @@ th, td {
 th {
     text-align: left;
 }
-#height_map {
-    width: 100%;
-    height: 100%;
-}
 
 /* === Custom control buttons === */
 /* Home button */

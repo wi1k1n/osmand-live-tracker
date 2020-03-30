@@ -26,6 +26,12 @@ var waypoints2coords = function(wps) {
 	// return coords;
 };
 
+var getCoordinateDistances = function(coords) {
+	// Takes an array of coordinates and returns an array of lengths for segments
+	// and travelled distances corresponding to each coordinate in the input array
+	let segmentDistances = coords.map((cur, idx, arr) => idx == 0 ? 0 : ol.sphere.getDistance(cur, arr[idx-1]));
+	return [segmentDistances.slice(0), segmentDistances.reduce((acc, cur) => acc + cur)];
+}
 var findClosestSegment = function(coords, pt) {
 	// Takes list of coords and point, and tries to find best segment for this point
 	function dist2segment(pt1, pt2, m) {
@@ -63,16 +69,8 @@ var findClosestSegment = function(coords, pt) {
 	return [bestInd, bestT];
 };
 
-/**
- * Format length output.
- * @param {LineString} line The line.
- * @return {string} The formatted length.
- */
-var formatLineStringLnegth = function(line) {
-	let length = ol.sphere.getLength(line);
-	return formatDistance(length);
-};
 var formatDistance = function(dst) {
+	// Takes number of meters and formats it into a human-readable string
 	let output;
 	if (dst > 500) {
 		output = (Math.round(dst / 1000 * 100) / 100) + ' ' + 'km';
