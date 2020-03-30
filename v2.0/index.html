@@ -133,6 +133,9 @@
 
 					// Calculate segment distances and cumulative distances
 					[segmDst, cumulativeDst] = getCoordinateDistances(trackLine.getCoordinates());
+					ply_data[0].x = cumulativeDst;
+					ply_data[0].y = ele;
+					Plotly.redraw('height_map_container');
 
 					// Update marker
 					markerPoint.setCoordinates(ol.proj.fromLonLat(coords[coords.length-1]));
@@ -249,6 +252,7 @@
 		var cur_speed_obj = document.getElementById('cur_speed');
 		var cur_ele_obj = document.getElementById('cur_ele');
 		var cur_dst_obj = document.getElementById('cur_dst');
+		var height_map_container_obj = document.getElementById('height_map_container');
 
 		// var heightmap_obj = document.getElementById('height_map');
 		// var heightmap_ctx = heightmap_obj.getContext('2d');
@@ -273,43 +277,50 @@
 
 
 
-		var shapes = [{
-				type: 'line',
-				x0: 3, y0: 0,
-				x1: 3, y1: 1, yref: 'paper',
-				line: {
-					color: 'grey',
-					width: 1.5,
-					dash: 'dot'
-				}
-			}];
-		var data = [{
+		var ply_shapes = [{
+			type: 'line',
+			x0: 0, y0: 0,
+			x1: 0, y1: 1, yref: 'paper',
+			line: {
+				color: 'grey',
+				width: 1,
+				dash: 'dot'
+			}
+		}];
+		var ply_data = [{
 			x: cumulativeDst,
 			y: ele,
 			type: 'scatter',
 			name: 'Altitude'
 		}];
-		var layout = {
+		var ply_layout = {
 			modebar: {orientation: 'v'},
 			margin: {l: 30, t: 10, r: 20, b: 25},
 			showlegend: false,
-			shapes: shapes,
+			shapes: ply_shapes,
 			// dragmode: false
 		};
-		var options = {
+		var ply_options = {
 			displaylogo: false,
 			modeBarButtonsToRemove: ['toImage', 'zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'toggleSpikelines', 'hoverClosestCartesian', 'hoverCompareCartesian', 'resetScale2d']
 		};
-
-		Plotly.newPlot('height_map_container', data, layout, options);
+		Plotly.newPlot('height_map_container', ply_data, ply_layout, ply_options);
 		function drawHeightmap(ind=null) {
-			if (ind) {
-				shapes[0].x0 = shapes[0].x1 = cumulativeDst[ind];
-				data[0].x = cumulativeDst;
-				data[0].y = ele;
-				Plotly.redraw('height_map_container');
-			}
+			let v = cumulativeDst[0];
+			if (ind != null) v = cumulativeDst[ind];
+			ply_shapes[0].x0 = ply_shapes[0].x1 = v;
+			Plotly.relayout('height_map_container', {
+				'shapes[0]': ply_shapes[0]
+			});
 		}
+		height_map_container_obj.on('plotly_hover', function(d) {
+			let idx = d.points[0].pointNumber;
+			drawHeightmap(idx);
+		});
+		height_map_container_obj.addEventListener('mouseleave', function(d) {
+			console.log('mouseleave');
+			drawHeightmap();
+		});
 
 		// Cursor part
 		var cursor = null;
@@ -317,6 +328,7 @@
 		// Pointer onMouseMove
 		var displayCursor = function(coord, click=false, alt=false) {
 			let closestPoint = trackLine.getClosestPoint(coord);
+			let ind = null; // index of closes point (global scope for drawHeightMap function)
 			if (Math.sqrt(Math.pow(closestPoint[0] - coord[0], 2) + Math.pow(closestPoint[1] - coord[1], 2)) > CURSOR_TOLERANCE) {
 				// Cursor not in tolerance
 				cursor = null;
@@ -335,11 +347,11 @@
 
 				// Trying to find closest segment of trackLine
 				let closestSegment = findClosestSegment(trackLine.getCoordinates(), closestPoint);
-				let ind = closestSegment[0];
+				ind = closestSegment[0];
 				let t = closestSegment[1];
 
 				let wp = null;
-				if (ind && t)  wp = waypoints[ind];
+				if (ind != null && t != null)  wp = waypoints[ind];
 
 				let infoContent = '';
 				let hdopCat = null; // hdop category: 0, 1 or 2
@@ -349,9 +361,11 @@
 					cursorTrack.applyTransform(projectFunction);
 					// Considering that wp can be in the middle of last segment
 					let crds = cursorTrack.getCoordinates();
-					let l = crds[crds.length-1], lp = crds[crds.length-2];
-					let dxy = [l[0]-lp[0], l[1]-lp[1]];
-					crds[crds.length-1] = [lp[0] + t*dxy[0], lp[1] + t*dxy[1]];
+					if (crds.length > 1) { // case, when cursor at a very beginning does not need last point adjustment
+						let l = crds[crds.length - 1], lp = crds[crds.length - 2];
+						let dxy = [l[0] - lp[0], l[1] - lp[1]];
+						crds[crds.length - 1] = [lp[0] + t * dxy[0], lp[1] + t * dxy[1]];
+					}
 					cursorTrack.setCoordinates(crds);
 					// Calculating distance itself
 					let dst = ol.sphere.getLength(cursorTrack);
@@ -384,8 +398,6 @@
 					if (speed) infoContent += '<br>Speed: ' + speed;
 					if (ele) infoContent += '<br>Altitude: ' + ele;
 					infoContent += (infoContent.length > 0 ? '<br>Travelled: ' : '') + formatDistance(dst);
-
-					drawHeightmap(ind);
 				}
 
 				if (click && !alt) {
@@ -405,6 +417,7 @@
 				arbitraryPopup = true;
 				cursorOverlay.setPosition(coord);
 			}
+			drawHeightmap(ind);
 		};
 		map.on('pointermove', function(evt) {
 			if (evt.dragging) return;
