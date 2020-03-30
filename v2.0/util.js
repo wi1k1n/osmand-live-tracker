@@ -29,9 +29,9 @@ var waypoints2coords = function(wps) {
 var getCoordinateDistances = function(coords) {
 	// Takes an array of coordinates and returns an array of lengths for segments
 	// and travelled distances corresponding to each coordinate in the input array
-	let segmentDistances = coords.map((cur, idx, arr) => idx == 0 ? 0 : ol.sphere.getDistance(cur, arr[idx-1]));
-	return [segmentDistances.slice(0), segmentDistances.reduce((acc, cur) => acc + cur)];
-}
+	let segmentDistances = coords.map((cur, idx, arr) => idx == 0 ? 0 : ol.sphere.getDistance(cur, arr[idx-1])).slice(0);
+	return [segmentDistances, segmentDistances.reduce((acc, cur) => acc.concat(acc[acc.length-1]+cur), [0])];
+};
 var findClosestSegment = function(coords, pt) {
 	// Takes list of coords and point, and tries to find best segment for this point
 	function dist2segment(pt1, pt2, m) {

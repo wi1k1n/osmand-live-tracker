@@ -49,7 +49,6 @@
 		<button id="update_btn">U</button>
 	</div>
 	<div class="ol-control-heightmap ol-unselectable ol-control" id="height_map_container">
-		<!-- <canvas id="height_map"></canvas> -->
 	</div>
 	<script type="text/javascript">
 		var waypoints = []; // Originally downloaded JSON
@@ -115,6 +114,8 @@
 				if (currentTrack == null) currentTrack = tracks.find(x => x.uid == last_track_uid);
 				if (currentTrack.uid !== last_track_uid) alert('A newer track exists in database. Please reload the whole page!');
 				let points = data.points.filter(x => x.track_uid == currentTrack.uid);
+
+
 				if (points.length > 0) { // new data exists
 					// Preprocess received data
 					let waypoints_upd = points.sort(function(a, b) { return a.uid - b.uid}); // Sort ascending
@@ -272,21 +273,6 @@
 
 
 
-
-		var trace1 = {
-		  x: cumulativeDst,
-		  y: ele,
-		  type: 'scatter',
-		  name: 'Altitude'
-		};
-
-		// var trace2 = {
-		//   x: [1, 2, 3, 4],
-		//   y: [16, 5, 11, 9],
-		//   type: 'scatter',
-		//   name: 'Speed'
-		// };
-
 		var shapes = [{
 				type: 'line',
 				x0: 3, y0: 0,
@@ -297,42 +283,32 @@
 					dash: 'dot'
 				}
 			}];
-		var data = [trace1];//, trace2];
+		var data = [{
+			x: cumulativeDst,
+			y: ele,
+			type: 'scatter',
+			name: 'Altitude'
+		}];
 		var layout = {
 			modebar: {orientation: 'v'},
-			margin: {l: 15, t: 0, r: 15, b: 15},
+			margin: {l: 30, t: 10, r: 20, b: 25},
 			showlegend: false,
-			shapes: shapes
-		}
-
-		Plotly.newPlot('height_map_container', data, layout, {
+			shapes: shapes,
+			// dragmode: false
+		};
+		var options = {
 			displaylogo: false,
-			modeBarButtonsToRemove: ['toImage', 'zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'toggleSpikelines', 'hoverClosestCartesian', 'hoverCompareCartesian']
-		});
-		function drawHeightmap(ind=null) {
-			shapes[0].x0 = 1.5;
-			shapes[0].x1 = 1.5;
-			Plotly.redraw(height_map_container);
-			// let padding = [10, 10, 10, 10];
-			// let w = heightmap_obj.width, h = heightmap_obj.height;
-			// let minV = Math.min.apply(null, ele), maxV = Math.max.apply(null, ele);
-			// let ctx = heightmap_ctx;
-			// let wa = w - padding[1] - padding[3]; // active width
-			// let ha = h - padding[0] - padding[2]; // active height
-			// let rx = wa / ele.length;		// rate x
-			// let ry = ha / (maxV - minV);	// rate y
+			modeBarButtonsToRemove: ['toImage', 'zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'toggleSpikelines', 'hoverClosestCartesian', 'hoverCompareCartesian', 'resetScale2d']
+		};
 
-			// ctx.clearRect(0, 0, w, h);
-			// ctx.beginPath();
-			// ctx.moveTo(padding[3], padding[0] + ha);
-			// for (let i = 1; i < ele.length; i++) {
-			// 	ctx.lineTo(padding[3] + Math.round(i * rx), padding[0] + ha - Math.round((ele[i] - minV) * ry));
-			// }
-			// if (ind) {
-			// 	ctx.moveTo(padding[3] + Math.round(ind * rx), padding[0]);
-			// 	ctx.lineTo(padding[3] + Math.round(ind * rx), padding[0] + ha);
-			// }
-			// ctx.stroke();
+		Plotly.newPlot('height_map_container', data, layout, options);
+		function drawHeightmap(ind=null) {
+			if (ind) {
+				shapes[0].x0 = shapes[0].x1 = cumulativeDst[ind];
+				data[0].x = cumulativeDst;
+				data[0].y = ele;
+				Plotly.redraw('height_map_container');
+			}
 		}
 
 		// Cursor part
