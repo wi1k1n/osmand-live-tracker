@@ -3,440 +3,62 @@
 <!-- TODO: add a page, where one can add smth line waypoint (lon/lat and description), which is later displayed on track -->
 <!-- TODO: automatically separate tracks (probably on server side) by delay in timestamps and draw them separately -->
 <html lang="en">
-	<head>
-		<link rel="icon" type="image/png" href="img/pinc_32.png">
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/css/ol.css" type="text/css">
-		<script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/build/ol.js"></script>
-		<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+<head>
+    <meta charset="UTF-8">
+    <title>Track My Bike v2.1</title>
 
-		<link rel="stylesheet" href="style.css" type="text/css">
-		<script src="util.js"></script>
-        <script src="constants.js"></script>
-		<title>Track My Bike v2.0</title>
-	</head>
+    <link rel="icon" type="image/png" href="img/pinc_32.png">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/css/ol.css" type="text/css">
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/build/ol.js"></script>
+    <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+
+    <link rel="stylesheet" href="css/style.css" type="text/css">
+    <script src="js/util.js"></script>
+    <script src="js/constants.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/updater.js"></script>
+    <script src="js/graph.js"></script>
+</head>
 <body>
-	<div id="map" class="map"></div>
-	<div id="popup" class="ol-popup">
-		<a href="#" id="popup-closer" class="ol-popup-closer"></a>
-		<div id="popup-content"></div>
-	</div>
-	<div class="ol-control-panel ol-unselectable ol-control" id="cur_info_container">
-		<div>Sender: <span id="cur_sender"></span></div>
-		<div>Time: <span id="cur_timestamp"></span></div>
-		<div>Speed: <span id="cur_speed"></span></div>
-		<div>Altitude: <span id="cur_ele"></span></div>
-		<div>Distance: <span id="cur_dst"></span></div>
-	</div>
-	<div class="ol-control-table ol-unselectable ol-control" id="info_table">
-		<table>
-            <tr><th>Track name: </th><th id="track_name"></th></tr>
-			<tr><th>Track started at: </th><th id="time_on_start"></th></tr>
-			<tr><th>Time at marker: </th><th id="time_at_marker"></th></tr>
-			<tr><th>Speed at marker: </th><th id="speed_at_marker"></th></tr>
-			<tr><th>Total distance: </th><th id="dst_travelled"></th></tr>
-			<tr style="color: gray;"><th>Last refresh: </th><th id="last_refresh"></th></tr>
-		</table>
-	</div>
-	<div class="ol-control-refresh ol-unselectable ol-control" id="refresh_panel">
-		<select id="refresh_interval" style="width: auto;">
-			<option value="-1">Never</option>
-			<option value="5000">5 sec</option>
-			<option value="30000">30 sec</option>
-			<option value="60000">1 min</option>
-			<option value="120000" selected>2 min</option>
-			<option value="300000">5 min</option>
-		</select>
-		<button id="update_btn">U</button>
-	</div>
-	<div class="ol-control-heightmap ol-unselectable ol-control" id="height_map_container">
-	</div>
-	<script type="text/javascript">
-		var waypoints = []; // Originally downloaded JSON
-		var coords = []; // lon/lat array for showing track on map
-        var currentTrack = null; // track_uid of currently shown track
-		var ele = []; // array of elevation measurements
-		var cumulativeDst = []; // array of travelled distance points
-		var segmDst = []; // array of lengths for each segment
-		var projectFunction = ol.proj.getTransform('EPSG:4326', 'EPSG:3857');
-
-		var sourceTrack = new ol.source.Vector({}); // source for track
-		var sourceMarker = new ol.source.Vector({}); // source for marker
-		var trackLine = new ol.geom.LineString([]); // ol.geom.LineString instance for track
-		var markerPoint = new ol.geom.Point([]); // ol.geom.Point instance for marker
-
-		sourceTrack.addFeature(new ol.Feature(trackLine));
-		sourceMarker.addFeature(new ol.Feature(markerPoint));
-
-		function centerMapOnTrack() {
-			map.getView().fit(trackLine, {padding: [150, 100, 100, 100]});
-		}
-		function centerMapOnMarker() {
-			let view = map.getView();
-			view.setCenter(trackLine.getLastCoordinate());
-			view.setZoom(15);
-		}
-		var DEBUG_curDataIndex = 0;
-		const DEBUG_DATABATCH = 10;
-		var updateWaypoints = function(centerTrack=false) {
-			// console.log('updateWaypoints');
-			let url = URL_GETPOINTS;
-			if (waypoints.length > 0) url += '?starting=' + waypoints[waypoints.length-1]['uid'];
-			// <DEBUG>
-			if (DEBUG) {
-				url = URL_GETPOINTS + '?starting=' + DEBUG_curDataIndex + '&ending=' + (DEBUG_curDataIndex + DEBUG_DATABATCH);
-				DEBUG_curDataIndex += DEBUG_DATABATCH;
-			}
-			// </DEBUG>
-			getJSON(url,  function(err, data) {
-				if (err != null || data == null) {
-					alert('Could not update data!');
-                    console.error('Requested url: ' + url);
-					console.error(err);
-					return;
-				}
-				if ('error' in data) {
-                    alert('Could not update data! Error occurred!');
-                    console.error('Requested url: ' + url);
-                    console.error(data['error']);
-                    return;
-                }
-				if (!('tracks' in data) || !('points' in data)) {
-                    alert('Loaded data is invalid!');
-                    console.error('Requested url: ' + url);
-                    console.error(data);
-                    return;
-                }
-
-				// If there is no errors, then parse data
-                let tracks = data.tracks; // Every request returns the whole table of tracks
-				// This is temporary solution while separate tracks functionality is not implemented
-				let last_track_uid = Math.max.apply(Math, tracks.map(function(o) { return o.uid; }));
-				if (currentTrack == null) currentTrack = tracks.find(x => x.uid == last_track_uid);
-				if (currentTrack.uid !== last_track_uid) alert('A newer track exists in database. Please reload the whole page!');
-				let points = data.points.filter(x => x.track_uid == currentTrack.uid);
-
-
-				if (points.length > 0) { // new data exists
-					// Preprocess received data
-					let waypoints_upd = points.sort(function(a, b) { return a.uid - b.uid}); // Sort ascending
-					let coords_upd = waypoints2coords(waypoints_upd); // prepare lon/lat array
-					let ele_upd = points.map(x => x['altitude']);
-
-					// Concatenate with already existing data
-					waypoints = waypoints.concat(waypoints_upd);
-					coords = coords.concat(coords_upd);
-					ele = ele.concat(ele_upd);
-
-					// Update track
-					trackLine.setCoordinates(coords);
-					trackLine.applyTransform(projectFunction);
-
-					// Calculate segment distances and cumulative distances
-					[segmDst, cumulativeDst] = getCoordinateDistances(trackLine.getCoordinates());
-					ply_data[0].x = cumulativeDst;
-					ply_data[0].y = ele;
-					Plotly.redraw(height_map_container_obj);
-
-					// Update marker
-					markerPoint.setCoordinates(ol.proj.fromLonLat(coords[coords.length-1]));
-
-					// Center map on track
-					if (!waypoints || centerTrack) centerMapOnTrack();
-
-					// ======= Update info on page =======
-					let lwp = waypoints[waypoints.length - 1]; // last waypoint
-
-					// Update track_started_at info
-                    track_name_obj.innerText = currentTrack.name;
-					if (lwp.timestamp_log) time_on_start_obj.innerText = waypoints[0].timestamp_log;
-					else if (lwp.timestamp_server) time_on_start_obj.innerText = waypoints[0].timestamp_server + ' (request time)';
-					else time_on_start_obj.innerText = "unknown";
-					// Update last_update
-					if (lwp.timestamp_log) time_at_marker_obj.innerText = lwp.timestamp_log;
-					else if (lwp.timestamp_server) time_at_marker_obj.innerText = lwp.timestamp_server + ' (request time)';
-					else time_at_marker_obj.innerText = "unknown";
-					// Update current_speed
-					if (lwp.speed)  speed_at_marker_obj.innerText = Number(parseFloat(lwp.speed) * 3.6).toFixed(1) + " km/h";
-					else speed_at_marker_obj.innerText = "unknown";
-					// Update travelled distance
-					dst_travelled_obj.innerText = formatDistance(ol.sphere.getLength(trackLine));
-				}
-
-				// Update last_update info
-				last_refresh_obj.innerText = getFormattedDate();
-			});
-		}; updateWaypoints(true); // initial update with full track
-
-		// onClick for [update] button
-		document.getElementById('update_btn').addEventListener('click', function(e) {
-			updateWaypoints();
-			setUpdateInterval();
-		});
-
-		// Popup on cursor
-		var popupContent = document.getElementById('popup-content');
-		var popupCloser = document.getElementById('popup-closer');
-
-		var cursorOverlay = new ol.Overlay({
-			element: document.getElementById('popup'),
-			autoPan: true,
-			autoPanAnimation: {
-				duration: 10
-			}
-		});
-		function closePopup() {
-			cursorOverlay.setPosition(undefined);
-			popupCloser.blur();
-			arbitraryPopup = false;
-		}
-		popupCloser.onclick = function() {
-			closePopup();
-			return false;
-		};
-
-		var layerTrack = new ol.layer.Vector({
-			name: 'Track',
-			source: sourceTrack,
-			style: styleTrack
-		});
-		var map = new ol.Map({
-			target: 'map',
-			layers: [
-				new ol.layer.Tile({
-					name: 'Tile',
-					source: new ol.source.OSM()
-				}),
-				layerTrack,
-				new ol.layer.Vector({
-					name: 'Marker',
-					source: sourceMarker,
-					style: styleMarker
-				})
-			],
-			view: new ol.View({
-				center: ol.proj.fromLonLat([37.41, 8.82]),
-				zoom: 4
-			}),
-			controls: ol.control.defaults().extend([
-				new ol.control.ScaleLine({bar: true, text: false}),
-				new ol.control.FullScreen(),
-				new CustomControl({
-					label: '⯐',
-					className: 'ol-control-marker ol-control-custom',
-					callback: centerMapOnMarker
-				}),
-				new CustomControl({
-					label: '⌂',
-					className: 'ol-control-home ol-control-custom',
-					callback: centerMapOnTrack
-				}),
-				new ol.control.Control({ element: document.getElementById('cur_info_container') }),
-				new ol.control.Control({ element: document.getElementById('info_table') }),
-				new ol.control.Control({ element: document.getElementById('refresh_panel') }),
-				new ol.control.Control({ element: document.getElementById('height_map_container') })
-			]),
-			overlays: [cursorOverlay]
-		});
-
-		var refresh_interval_obj = document.getElementById('refresh_interval');
-		var track_name_obj = document.getElementById('track_name');
-        var time_at_marker_obj = document.getElementById('time_at_marker');
-		var time_on_start_obj = document.getElementById('time_on_start');
-		var speed_at_marker_obj = document.getElementById('speed_at_marker');
-		var dst_travelled_obj = document.getElementById('dst_travelled');
-		var last_refresh_obj = document.getElementById('last_refresh');
-
-		var cur_info_container_obj = document.getElementById('cur_info_container');
-		var cur_sender_obj = document.getElementById('cur_sender');
-		var cur_timestamp_obj = document.getElementById('cur_timestamp');
-		var cur_speed_obj = document.getElementById('cur_speed');
-		var cur_ele_obj = document.getElementById('cur_ele');
-		var cur_dst_obj = document.getElementById('cur_dst');
-		var height_map_container_obj = document.getElementById('height_map_container');
-
-		// var heightmap_obj = document.getElementById('height_map');
-		// var heightmap_ctx = heightmap_obj.getContext('2d');
-
-		// Autorefresh part
-		var refresh_interval = parseInt(refresh_interval_obj.options[refresh_interval_obj.selectedIndex].value);
-		var refresh_interval_id = null;
-		refresh_interval_obj.onchange = function() {
-			// console.log('onchange');
-			refresh_interval = parseInt(refresh_interval_obj.options[refresh_interval_obj.selectedIndex].value);
-			setUpdateInterval();
-		};
-		var setUpdateInterval = function() {
-			// console.log('setUpdateInterval: ' + refresh_interval);
-			if (refresh_interval_id)  clearInterval(refresh_interval_id);
-			if (refresh_interval > 0) {
-				refresh_interval_id = window.setInterval(updateWaypoints, refresh_interval);
-			}
-		}; setUpdateInterval();
-
-
-
-
-
-		var ply_shapes = [{
-			type: 'line',
-			x0: 0, y0: 0,
-			x1: 0, y1: 1, yref: 'paper',
-			line: {
-				color: 'grey',
-				width: 1,
-				dash: 'dot'
-			}
-		}];
-		var ply_data = [{
-			x: cumulativeDst,
-			y: ele,
-			type: 'scatter',
-			name: 'Altitude'
-		}];
-		var ply_layout = {
-			modebar: {orientation: 'v'},
-			margin: {l: 30, t: 10, r: 20, b: 25},
-			showlegend: false,
-			shapes: ply_shapes,
-			// dragmode: false
-		};
-		var ply_options = {
-			displaylogo: false,
-			modeBarButtonsToRemove: ['toImage', 'zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'toggleSpikelines', 'hoverClosestCartesian', 'hoverCompareCartesian', 'resetScale2d']
-		};
-		Plotly.newPlot(height_map_container_obj, ply_data, ply_layout, ply_options);
-		function drawHeightmap(ind=null) {
-			let v = cumulativeDst[0];
-			if (ind != null) v = cumulativeDst[ind];
-			ply_shapes[0].x0 = ply_shapes[0].x1 = v;
-			Plotly.relayout(height_map_container_obj, {
-				'shapes[0]': ply_shapes[0]
-			});
-		}
-		height_map_container_obj.on('plotly_hover', function(d) {
-			let idx = d.points[0].pointNumber;
-			drawHeightmap(idx);
-		});
-		height_map_container_obj.addEventListener('mouseleave', function(d) {
-			console.log('mouseleave');
-			drawHeightmap();
-		});
-
-		// Cursor part
-		var cursor = null;
-		var arbitraryPopup = false; // true, if popup shows non-track point atm. needed to trigger closePopup() correctly
-		// Pointer onMouseMove
-		var displayCursor = function(coord, click=false, alt=false) {
-			let closestPoint = trackLine.getClosestPoint(coord);
-			let ind = null; // index of closes point (global scope for drawHeightMap function)
-			if (Math.sqrt(Math.pow(closestPoint[0] - coord[0], 2) + Math.pow(closestPoint[1] - coord[1], 2)) > CURSOR_TOLERANCE) {
-				// Cursor not in tolerance
-				cursor = null;
-				map.render();
-				// Hide info panel
-				cur_info_container_obj.style.display = "none";
-				// If not in tolerance and no alt (i.e. track point request) ~ ordinary click on map -> close popup
-				if (click && !alt) {
-					closePopup();
-				}
-			} else {
-				// Cursor in tolerance
-				if (cursor === null)  cursor = new ol.geom.Point(closestPoint);
-				else cursor.setCoordinates(closestPoint);
-				map.render();
-
-				// Trying to find closest segment of trackLine
-				let closestSegment = findClosestSegment(trackLine.getCoordinates(), closestPoint);
-				ind = closestSegment[0];
-				let t = closestSegment[1];
-
-				let wp = null;
-				if (ind != null && t != null)  wp = waypoints[ind];
-
-				let infoContent = '';
-				let hdopCat = null; // hdop category: 0, 1 or 2
-				if (wp) {
-					// Calculated distance so far
-					let cursorTrack = new ol.geom.LineString(coords.slice(0, ind + 1));
-					cursorTrack.applyTransform(projectFunction);
-					// Considering that wp can be in the middle of last segment
-					let crds = cursorTrack.getCoordinates();
-					if (crds.length > 1) { // case, when cursor at a very beginning does not need last point adjustment
-						let l = crds[crds.length - 1], lp = crds[crds.length - 2];
-						let dxy = [l[0] - lp[0], l[1] - lp[1]];
-						crds[crds.length - 1] = [lp[0] + t * dxy[0], lp[1] + t * dxy[1]];
-					}
-					cursorTrack.setCoordinates(crds);
-					// Calculating distance itself
-					let dst = ol.sphere.getLength(cursorTrack);
-
-					// Updating info on page if found
-					let timestamp = (wp.timestamp_log ? wp.timestamp_log : wp.timestamp_server);
-					let speed = null;
-					let ele = null;
-					let sender = null;
-					let hdop = null;
-					if (wp.speed) speed = Number(parseFloat(wp.speed) * 3.6).toFixed(1) + " km/h";
-					if (wp.altitude) ele = Number(parseFloat(wp.altitude)).toFixed(1) + " m";
-					if (wp.sender) sender = wp.sender;
-					if (wp.hdop) hdop = wp.hdop;
-
-					if (hdop) hdopCat = categorizeHDOP(hdop);
-
-					// Info panel in the bottom-right corner
-					cur_info_container_obj.style.display = "block";
-					cur_sender_obj.innerText = sender ? sender : 'unknown';
-					cur_timestamp_obj.innerText = timestamp;
-					cur_speed_obj.innerText = speed ? speed : 'unknown';
-					cur_ele_obj.innerText = ele ? ele : 'unknown';
-					cur_dst_obj.innerText = formatDistance(dst);
-
-					// Info for popup
-					infoContent = '';
-					if (sender) infoContent += 'Sender: ' + sender;
-					infoContent += (infoContent.length > 0 ? '<br>Time: ' : '') + timestamp;
-					if (speed) infoContent += '<br>Speed: ' + speed;
-					if (ele) infoContent += '<br>Altitude: ' + ele;
-					infoContent += (infoContent.length > 0 ? '<br>Travelled: ' : '') + formatDistance(dst);
-				}
-
-				if (click && !alt) {
-					// Click without alt but in tolerance lead to track-popup
-					let hdms = ol.coordinate.toStringHDMS(ol.proj.toLonLat(closestPoint)).replace(/\s/g, '').replace(/N/g, 'N ');
-					if (hdopCat != null) popupContent.innerHTML = '<code title="'+HDOP_TITLES[hdopCat]+'" style="color: '+HDOP_COLORS[hdopCat]+';">' + hdms + '</code>';
-					else  popupContent.innerHTML = '<code>' + hdms + '</code>';
-					popupContent.innerHTML += '<p>' + infoContent + '</p>';
-					arbitraryPopup = false;
-					cursorOverlay.setPosition(closestPoint);
-				}
-			}
-			if (click && alt) {
-				// Independently of tolerance, if alt used with click, showing coordinate of exact click position
-				let hdms = ol.coordinate.toStringHDMS(ol.proj.toLonLat(coord)).replace(/\s/g, '').replace(/N/g, 'N ');
-				popupContent.innerHTML = '<code>' + hdms + '</code>';
-				arbitraryPopup = true;
-				cursorOverlay.setPosition(coord);
-			}
-			drawHeightmap(ind);
-		};
-		map.on('pointermove', function(evt) {
-			if (evt.dragging) return;
-			var coord = map.getEventCoordinate(evt.originalEvent);
-			displayCursor(coord);
-		});
-		map.on('click', function(evt) {
-			displayCursor(evt.coordinate);
-		});
-		map.on('singleclick', function(evt) {
-			displayCursor(evt.coordinate, true, evt.originalEvent.altKey);
-		});
-
-		layerTrack.on('postrender', function(evt) {
-			var vectorContext = ol.render.getVectorContext(evt);
-			vectorContext.setStyle(styleCursor);
-			if (cursor !== null)
-				vectorContext.drawGeometry(cursor);
-		});
-	</script>
+<!-- Map container -->
+<div id="map" class="map"></div>
+<!-- Cursor info container -->
+<div id="popup" class="ol-popup">
+    <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+    <div><code id="cur_coords"></code></div>
+    <div id="popup_track_specific">
+        <div>Sender: <span id="cur_sender"></span></div>
+        <div>Time: <span id="cur_timestamp" class="timestamp-server"></span></div>
+        <div>Speed: <span id="cur_speed"></span></div>
+        <div>Altitude: <span id="cur_ele"></span></div>
+        <div>Distance: <span id="cur_dst"></span></div>
+    </div>
+</div>
+<!-- Marker info panel container -->
+<div class="ol-control-table ol-unselectable ol-control" id="info_table">
+    <table>
+        <tr><th>Track name: </th><th id="track_name"></th></tr>
+        <tr><th>Track started at: </th><th id="time_on_start"></th></tr>
+        <tr><th>Time at marker: </th><th id="time_at_marker"></th></tr>
+        <tr><th>Speed at marker: </th><th id="speed_at_marker"></th></tr>
+        <tr><th>Total distance: </th><th id="dst_travelled"></th></tr>
+        <tr style="color: gray;"><th>Last refresh: </th><th id="last_refresh"></th></tr>
+    </table>
+</div>
+<!-- Refresh settings panel container -->
+<div class="ol-control-refresh ol-unselectable ol-control" id="refresh_panel">
+    <select id="refresh_interval" style="width: auto;">
+        <option value="-1">Never</option>
+        <option value="5000">5 sec</option>
+        <option value="30000">30 sec</option>
+        <option value="60000">1 min</option>
+        <option value="120000" selected>2 min</option>
+        <option value="300000">5 min</option>
+    </select>
+    <button id="update_btn">U</button>
+</div>
+<!-- Graph panel container -->
+<div class="ol-control-heightmap ol-unselectable ol-control" id="height_map_container"></div>
+<script src="js/main.js"></script>
 </body>
 </html>
