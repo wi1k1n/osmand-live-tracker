@@ -86,23 +86,23 @@ var updateWaypoints = function(centerTrack=false) {
             let lwp = waypoints[waypoints.length - 1]; // last waypoint
 
             // Update track_started_at info
-            obj.markerInfo.name.innerText = currentTrack.name;
-            if (lwp.timestamp_log) obj.markerInfo.timeStart.innerText = waypoints[0].timestamp_log;
-            else if (lwp.timestamp_server) obj.markerInfo.timeStart.innerText = waypoints[0].timestamp_server + ' (request time)';
-            else obj.markerInfo.timeStart.innerText = "unknown";
+            obj.trackInfo.name.innerText = currentTrack.name;
+            if (lwp.timestamp_log) obj.trackInfo.timeStart.innerText = waypoints[0].timestamp_log;
+            else if (lwp.timestamp_server) obj.trackInfo.timeStart.innerText = waypoints[0].timestamp_server + ' (request time)';
+            else obj.trackInfo.timeStart.innerText = "unknown";
             // Update last_update
-            if (lwp.timestamp_log) obj.markerInfo.time.innerText = lwp.timestamp_log;
-            else if (lwp.timestamp_server) obj.markerInfo.time.innerText = lwp.timestamp_server + ' (request time)';
-            else obj.markerInfo.time.innerText = "unknown";
+            if (lwp.timestamp_log) obj.trackInfo.time.innerText = lwp.timestamp_log;
+            else if (lwp.timestamp_server) obj.trackInfo.time.innerText = lwp.timestamp_server + ' (request time)';
+            else obj.trackInfo.time.innerText = "unknown";
             // Update current_speed
-            if (lwp.speed)  obj.markerInfo.speed.innerText = Number(parseFloat(lwp.speed) * 3.6).toFixed(1) + " km/h";
-            else obj.markerInfo.speed.innerText = "unknown";
+            if (lwp.speed)  obj.trackInfo.speed.innerText = Number(parseFloat(lwp.speed) * 3.6).toFixed(1) + " km/h";
+            else obj.trackInfo.speed.innerText = "unknown";
             // Update travelled distance
-            obj.markerInfo.distance.innerText = formatDistance(ol.sphere.getLength(trackLine));
+            obj.trackInfo.distance.innerText = formatDistance(ol.sphere.getLength(trackLine));
         }
 
         // Update last_update info
-        obj.markerInfo.lastRefresh.innerText = getFormattedDate();
+        obj.trackInfo.lastRefresh.innerText = getFormattedDate();
     });
 }; updateWaypoints(true); // initial update with full track
 

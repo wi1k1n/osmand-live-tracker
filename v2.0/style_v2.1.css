@@ -82,9 +82,10 @@ th {
 }
 /* Height map */
 .ol-control-heightmap {
-    width: 50%;
+    width: auto;
     height: 100px;
-    right: unset;
+    min-width: 128px;
+    right: 350px;
     bottom: 8px;
     left: 160px;
     top: unset;
@@ -93,19 +94,6 @@ th {
 }
 .ol-control-heightmap:hover {
     background-color: rgba(204, 181, 55, 0.8);
-}
-
-
-/* === 2 column layout === */
-.column {
-    float: left;
-    width: 33.3%;
-}
-/* Clear floats after the columns */
-.row:after {
-    content: "";
-    display: table;
-    clear: both;
 }
 
 /* === Cursor popup === */
@@ -151,4 +139,14 @@ th {
 }
 .ol-popup-closer:after {
     content: "✖";
+}
+/* HDOP value stylization */
+.hdop-excellent {
+    color: green;
+}
+.hdop-average {
+    color: rgb(180,162,33);
+}
+.hdop-poor {
+    color: red;
 }

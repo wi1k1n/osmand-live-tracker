@@ -3,10 +3,15 @@ var obj = {
     map: ebid('map'),
     popup: {
         panel: ebid('popup'),
-        content: ebid('popup-content'),
-        closer: ebid('popup-closer')
+        closer: ebid('popup-closer'),
+        coords: ebid('cur_coords'),
+        sender: ebid('cur_sender'),
+        time: ebid('cur_timestamp'),
+        speed: ebid('cur_speed'),
+        ele: ebid('cur_ele'),
+        distance: ebid('cur_dst')
     },
-    markerInfo: {
+    trackInfo: {
         panel: ebid('info_table'),
         name: ebid('track_name'),
         time: ebid('time_at_marker'),
@@ -24,20 +29,7 @@ var obj = {
     // DEPRECATED:
     curInfo: {
         panel: ebid('cur_info_container'),
-        sender: ebid('cur_sender'),
-        time: ebid('cur_timestamp'),
-        speed: ebid('cur_speed'),
-        ele: ebid('cur_ele'),
-        distance: ebid('cur_dst')
     }
 };
 
-var map = new Map(obj);
-var upd = new Updater(obj);
-
-upd.loadData(function() {
-    // This function is stored in Updater and is called as a callback for upd.updateData()
-    console.log(upd.tracks);
-    console.log(upd.points);
-    map.updateTrack(upd.points);
-});
+var map = new Tracker(obj);

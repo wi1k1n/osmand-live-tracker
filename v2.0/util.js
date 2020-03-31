@@ -20,7 +20,7 @@ var getCoordinateDistances = function(coords) {
 	let segmentDistances = coords.map((cur, idx, arr) => idx == 0 ? 0 : ol.sphere.getDistance(cur, arr[idx-1])).slice(0);
 	return [segmentDistances, segmentDistances.reduce((acc, cur) => acc.concat(acc[acc.length-1]+cur), [0])];
 };
-var findClosestSegment = function(coords, pt) {
+var findClosestSegment = function(coords, pt, tolerance=1e-2) {
 	// Takes list of coords and point, and tries to find best segment for this point
 	function dist2segment(pt1, pt2, m) {
 		// returns [t, d, p]; where:
@@ -30,13 +30,15 @@ var findClosestSegment = function(coords, pt) {
 		function dotProduct(p1, p2) { return p1[0]*p2[0] + p1[1]*p2[1]; }
 		function sqr(x) { return x * x; }
 		function dst2(p1, p2) { return sqr(p2[0] - p1[0]) + sqr(p2[1] - p1[1]); }
-		function norm(p) { return Math.sqrt(dst2([0, 0], p))}
+		// function norm(p) { return Math.sqrt(dst2([0, 0], p))}
+		function norm2(p) { return dst2([0, 0], p); }
 		let pt1m = [m[0] - pt1[0], m[1] - pt1[1]]; // vector from pt1 to mouse
 		let pt12 = [pt2[0] - pt1[0], pt2[1] - pt1[1]]; // vector from pt1 to pt2
 		let t = dotProduct(pt1m, pt12) / dst2(pt1, pt2); // coefficient of pt12 to get projection point x
 		let pt1x = [t * pt12[0], t * pt12[1]]; // vector from pt1 to projection point x
 		let xm = [pt1m[0] - pt1x[0], pt1m[1] - pt1x[1]]; // norm from pt12 to m
-		let d = norm(xm); // distance from m to pt12
+		// let d = norm(xm); // distance from m to pt12
+		let d = norm2(xm); // squared dst can be used, since only needed for finding minimum
 		let p = [pt1[0] + pt1x[0], pt1[1] + pt1x[1]]; // point x of projection m onto pt12
 		return [t, d, p];
 	}
@@ -51,6 +53,7 @@ var findClosestSegment = function(coords, pt) {
 				minDst = cur[1];
 				bestInd = i;
 				bestT = cur[0];
+				if (minDst < tolerance) break;
 			}
 		}
 	}
@@ -75,23 +78,6 @@ var categorizeHDOP = function(hdop) {
 
 
 // Styles for map
-var styleMarker = new ol.style.Style({
-	image: new ol.style.Icon({
-		anchor: [0.5, 1],
-		scale: 0.5,
-		src: 'img/pin.png'
-	})
-	// image: new ol.style.Circle({
-	// 	radius: 5,
-	// 	fill: new ol.style.Fill({
-	// 		color: 'rgb(255, 255, 0)'
-	// 	}),
-	// 	stroke: new ol.style.Stroke({
-	// 		color: 'rgb(0, 0, 0)',
-	// 		width: 2
-	// 	})
-	// })
-});
 var styleCursor = new ol.style.Style({
 	image: new ol.style.Circle({
 		radius: 5,

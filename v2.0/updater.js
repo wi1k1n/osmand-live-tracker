@@ -2,22 +2,24 @@ function Updater(obj) {
     this.obj = obj;
     this.refresh_interval = -1;
     this.refresh_interval_id = null;
-    this.callback = null;
+
+    this.onDataLoaded = null;
+    this.onDataUpdated = null;
 
     this.tracks = null;
     this.selectedTrack = null;
     this.points = [];
+    this.pointsNewLength = 0;
 
-    obj.refresh.button.onclick = (function() { this.updateData.bind(this)(this.callback); }).bind(this);
+    obj.refresh.button.onclick = (function() { this.updateData.bind(this)(); }).bind(this);
     obj.refresh.interval.onchange = this._onRefreshIntervalChanged.bind(this);
     this._onRefreshIntervalChanged()
 }
 
-Updater.prototype.loadData = function(callback=null) {
+Updater.prototype.loadData = function() {
     // Is supposed to be called once at the very beginning (alerts all unexpected behaviour)
-    this.callback = callback;
-    this._updateTracks((function(d) {
-        if (d.length == 0) {
+    this._updateTracks((function() {
+        if (this.tracks.length == 0) {
             alert('No tracks found!');
             return;
         }
@@ -31,12 +33,13 @@ Updater.prototype.loadData = function(callback=null) {
                 return;
             }
             this.points = p;
-            callback();
+            this.pointsNewLength = p.length;
+            if (this.onDataLoaded) this.onDataLoaded();
         }).bind(this));
     }.bind(this)));
 };
-Updater.prototype.updateData = function(callback=null, auto=null) {
-    console.log('upd.updateData' + (auto ? ' (auto)' : ''));
+Updater.prototype.updateData = function(auto=null) {
+    // console.log('upd.updateData' + (auto ? ' (auto)' : ''));
     // Updates current list of points with new ones
     let starting = null;
     let ending = null;
@@ -46,8 +49,14 @@ Updater.prototype.updateData = function(callback=null, auto=null) {
         if (!auto) this._setUpdateInterval(); // restart interval timer if manually clicked
         if (p.length == 0) return;
         this.points = this.points.concat(p);
-        if (callback) callback();
+        this.pointsNewLength = p.length;
+        if (this.onDataUpdated) this.onDataUpdated();
     }).bind(this));
+};
+
+Updater.prototype.getLatestUpdatePoints = function() {
+    // Return the part of points, that has been loaded during last update
+    return this.points.slice(this.points.length - this.pointsNewLength, this.points.length);
 };
 
 Updater.prototype._updateTracks = function(callback=null) {
@@ -56,7 +65,7 @@ Updater.prototype._updateTracks = function(callback=null) {
     this._getJSON(url, (function (e, d) {
         if (!this._handleJSONResponse(e, d, url, ['tracks'])) return;
         this.tracks = d.tracks;
-        if (callback) callback(this.tracks);
+        if (callback) callback();
     }).bind(this));
 };
 Updater.prototype._requestPoints = function(track_uid, starting, ending, callback) {
@@ -75,7 +84,7 @@ Updater.prototype._setUpdateInterval = function() {
     if (this.refresh_interval_id)
         window.clearInterval(this.refresh_interval_id);
     if (this.refresh_interval > 0) {
-        this.refresh_interval_id = window.setInterval(this.updateData.bind(this), this.refresh_interval, this.callback, true);
+        this.refresh_interval_id = window.setInterval(this.updateData.bind(this), this.refresh_interval, true);
     }
 };
 Updater.prototype._onRefreshIntervalChanged = function() {
