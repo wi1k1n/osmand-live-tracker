@@ -11,9 +11,13 @@ function Tracker(obj) {
     this.ele = [];
     this.speed = [];
 
-    this.popupFixed = false;
+    this.popupFixed = false; // flag determining if popup is fixed (not following the cursor)
 
-    /////
+    this.graph = new Graph(this);
+    this.graph.onHover = this.onGraphHover.bind(this);
+    this.graph.onMouseLeave = this.onGraphMouseLeave.bind(this);
+
+    ///// Map settings /////
     this.trackLine = new ol.geom.LineString([]); // ol.geom.LineString instance for track
     this.markerPoint = new ol.geom.Point([]); // ol.geom.Point instance for marker
     this.cursorPoint = new ol.geom.Point([]); // ol.geom.Point instance for cursor
@@ -115,6 +119,8 @@ function Tracker(obj) {
 Tracker.prototype.updateTrack = function(new_points) {
     // console.log('map.updateTrack');
 
+    if (new_points.length === 0) return;
+
     // Add coordinates to trackLine
     let llCoords = new_points.map(x => [x.lon, x.lat]);
     let mCoords = llCoords.map(x => ol.proj.fromLonLat(x));
@@ -146,6 +152,8 @@ Tracker.prototype.updateTrack = function(new_points) {
     // For usage in graph
     this.ele = this.ele.concat(new_points.map(x => x.altitude));
     this.speed = this.speed.concat(new_points.map(x => x.speed));
+
+    this.graph.updateData();
 };
 Tracker.prototype.updateVisuals = function(e) {
     let isClick = e.type !== 'pointermove';
@@ -181,6 +189,9 @@ Tracker.prototype.updateVisuals = function(e) {
         // Cursor information panel update
         let ind = null, t = null;
         [ind, t] = findClosestSegment(this.trackLine.getCoordinates(), clPt);
+
+        this.graph.updateLayout(ind);
+
         if (!this.popupFixed || isClick) { // update panel if not fixed or on click on track
             let dst = this.cumulativeDistances[ind] + t * this.segmentDistances[ind];
             let cp = this.upd.points[ind];
@@ -240,6 +251,15 @@ Tracker.prototype.updateTrackInfo = function() {
     obj.trackInfo.lastRefresh.innerText = getFormattedDate();
 };
 
+Tracker.prototype.onGraphHover = function(d) {
+    let idx = d.points[0].pointNumber;
+    // Draw cursor synchronously
+    this.cursorPoint.setCoordinates(this.trackLine.getCoordinates()[idx]);
+    this.layerCursor.setVisible(true);
+};
+Tracker.prototype.onGraphMouseLeave = function(d) {
+    this.layerCursor.setVisible(false);
+};
 Tracker.prototype.onDataLoaded = function() {
     this.onDataUpdated();
     this.centerMapOnTrack();

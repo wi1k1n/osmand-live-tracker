@@ -38,26 +38,13 @@ th {
 .ol-touch .ol-control-marker {
     top: 118px;
 }
-/* Cursor info panel */
-.ol-control-panel {
-    /*width: 180px;*/
-    /*height: auto;*/
-    /*left: unset;*/
-    /*top: unset;*/
-    /*right: 8px;*/
-    /*bottom: 24px;*/
-    /*background-color: rgba(177, 119, 255, 0.8);*/
-    display: none;
-}
-/*.ol-control-panel:hover {*/
-/*    background-color: rgba(177, 119, 255, 0.8);*/
-/*}*/
+
 /* Track info table */
 .ol-control-table {
     width: auto;
     height: auto;
     left: unset;
-    bottom: 2px;
+    bottom: 22px;
     right: 4px;
     top: unset;
     background-color: rgba(167, 255, 217, 0.8);
@@ -83,7 +70,7 @@ th {
 /* Height map */
 .ol-control-heightmap {
     width: auto;
-    height: 100px;
+    height: 130px;
     min-width: 128px;
     right: 350px;
     bottom: 8px;
@@ -94,6 +81,9 @@ th {
 }
 .ol-control-heightmap:hover {
     background-color: rgba(204, 181, 55, 0.8);
+}
+.ol-touch .ol-control-heightmap {
+    display: none;
 }
 
 /* === Cursor popup === */

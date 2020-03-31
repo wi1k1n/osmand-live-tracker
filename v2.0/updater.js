@@ -47,10 +47,10 @@ Updater.prototype.updateData = function(auto=null) {
     if (DEBUG && starting != null) ending = starting + DEBUG_DATABATCH;
     this._requestPoints(this.selectedTrack.uid, starting, ending, (function(p) {
         if (!auto) this._setUpdateInterval(); // restart interval timer if manually clicked
-        if (p.length == 0) return;
-        this.points = this.points.concat(p);
         this.pointsNewLength = p.length;
         if (this.onDataUpdated) this.onDataUpdated();
+        if (p.length === 0) return;
+        this.points = this.points.concat(p);
     }).bind(this));
 };
 
