@@ -108,7 +108,7 @@ th {
     border: 1px solid #cccccc;
     bottom: 12px;
     left: -50px;
-    min-width: 180px;
+    min-width: 200px;
 }
 .ol-popup:after, .ol-popup:before {
     top: 100%;
@@ -140,6 +140,7 @@ th {
 .ol-popup-closer:after {
     content: "✖";
 }
+
 /* HDOP value stylization */
 .hdop-excellent {
     color: green;
@@ -148,5 +149,9 @@ th {
     color: rgb(180,162,33);
 }
 .hdop-poor {
+    color: red;
+}
+/* Timestamp stylization */
+.timestamp-server {
     color: red;
 }

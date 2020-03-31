@@ -71,9 +71,11 @@ var formatDistance = function(dst) {
 	return output;
 };
 var categorizeHDOP = function(hdop) {
+	// hdop >= 100 - special case for no stylization
 	if (hdop < 4) return 0;
 	else if (hdop < 13) return 1;
-	else return 2;
+	else if (hdop < 100) return 2;
+	else return 3;
 };
 
 

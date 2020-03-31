@@ -11,6 +11,8 @@ function Tracker(obj) {
     this.ele = [];
     this.speed = [];
 
+    this.popupFixed = false;
+
     /////
     this.trackLine = new ol.geom.LineString([]); // ol.geom.LineString instance for track
     this.markerPoint = new ol.geom.Point([]); // ol.geom.Point instance for marker
@@ -107,15 +109,11 @@ function Tracker(obj) {
     this.map.on('click', this.onClick.bind(this));
     this.map.on('singleclick', this.onSingleclick.bind(this));
 
-    this.obj.popup.closer.onclick = (function() {
-        this.closePopup();
-        return false;
-    }).bind(this);
+    this.obj.popup.closer.onclick = this.closePopup.bind(this);
 }
 
 Tracker.prototype.updateTrack = function(new_points) {
     // console.log('map.updateTrack');
-    console.log(new_points);
 
     // Add coordinates to trackLine
     let llCoords = new_points.map(x => [x.lon, x.lat]);
@@ -150,6 +148,22 @@ Tracker.prototype.updateTrack = function(new_points) {
     this.speed = this.speed.concat(new_points.map(x => x.speed));
 };
 Tracker.prototype.updateVisuals = function(e) {
+    let isClick = e.type !== 'pointermove';
+    let isAlt = e.originalEvent.altKey;
+    let mCoord = this.map.getEventCoordinate(e.originalEvent);
+
+    // Click with Alt: doesn't care about track tolerance
+    if (isAlt && isClick) {
+        this.updatePopupInfo({
+            point: mCoord,
+            hdop: 100
+        });
+        this.obj.popup.track_specific.style.display = 'none';
+        this.cursorOverlay.setPosition(mCoord);
+        this.popupFixed = true;
+        return;
+    }
+
     // Test if event is in tolerance with track
     let hit = false;
     this.map.forEachFeatureAtPixel(e.pixel, function(f, l) {
@@ -157,33 +171,39 @@ Tracker.prototype.updateVisuals = function(e) {
         return true;
     }, {hitTolerance: CURSOR_TOLERANCE, layerFilter: l => l === this.layerTrack});
 
+
     if (hit) { // We are in tolerance
         // First of all draw cursor
-        let mCoord = this.map.getEventCoordinate(e.originalEvent);
         let clPt = this.trackLine.getClosestPoint(mCoord);
         this.cursorPoint.setCoordinates(clPt);
         this.layerCursor.setVisible(true);
 
-        // Calculating distance
+        // Cursor information panel update
         let ind = null, t = null;
         [ind, t] = findClosestSegment(this.trackLine.getCoordinates(), clPt);
-        if (ind !== null && t !== null) { // sanity check; supposed to be always true
+        if (!this.popupFixed || isClick) { // update panel if not fixed or on click on track
             let dst = this.cumulativeDistances[ind] + t * this.segmentDistances[ind];
             let cp = this.upd.points[ind];
             this.updatePopupInfo({
                 point: clPt,
                 sender: cp.sender,
-                time: cp.timestamp_log ? cp.timestamp_log : cp.timestamp_server,
+                time_log: cp.timestamp_log,
+                time_server: cp.timestamp_server,
                 speed: cp.speed,
                 ele: cp.altitude,
                 distance: dst,
                 hdop: cp.hdop
             });
+            this.obj.popup.track_specific.style.display = 'block';
             this.cursorOverlay.setPosition(clPt);
         }
-    } else {
+        // Click in tolerance -> fix popup panel
+        if (isClick) this.popupFixed = true;
+    } else { // not in tolerance
         this.layerCursor.setVisible(false);
-        this.closePopup();
+
+        if (!this.popupFixed || isClick) // close popup if simple click (w/o alt) elsewhere
+            this.closePopup();
     }
 };
 
@@ -194,7 +214,9 @@ Tracker.prototype.updatePopupInfo = function(vals) {
     this.obj.popup.coords.title = HDOP_TITLES[hdopCat];
     this.obj.popup.coords.className = HDOP_CLASSNAMES[hdopCat];
     this.obj.popup.sender.innerText = vals.sender ? vals.sender : 'unknown';
-    this.obj.popup.time.innerText = vals.timestamp;
+    this.obj.popup.time.innerText = vals.time_log ? vals.time_log : (vals.time_server + '*');
+    this.obj.popup.time.title = vals.time_log ? '' : TIMESTAMP_SERVER_TITLE;
+    this.obj.popup.time.className = vals.time_log ? TIMESTAMP_CLASSNAMES[0] : TIMESTAMP_CLASSNAMES[1];
     this.obj.popup.speed.innerText = vals.speed ? Number(parseFloat(vals.speed) * 3.6).toFixed(1) + " km/h" : 'unknown';
     this.obj.popup.ele.innerText = vals.ele ? Number(parseFloat(vals.ele)).toFixed(1) + " m" : 'unknown';
     this.obj.popup.distance.innerText = formatDistance(vals.distance);
@@ -240,7 +262,7 @@ Tracker.prototype.onSingleclick = function(e) {
 
 Tracker.prototype.centerMapOnTrack = function() {
     if (this.trackLine.getCoordinates().length > 0)
-        this.map.getView().fit(this.trackLine, {padding: [75, 75, 150, 75]});
+        this.map.getView().fit(this.trackLine, {padding: [75, 75, 175, 75]});
 };
 Tracker.prototype.centerMapOnMarker = function() {
     if (this.markerPoint.getCoordinates().length > 0)
@@ -249,4 +271,5 @@ Tracker.prototype.centerMapOnMarker = function() {
 Tracker.prototype.closePopup = function() {
     this.cursorOverlay.setPosition(undefined);
     this.obj.popup.closer.blur();
+    this.popupFixed = false;
 };

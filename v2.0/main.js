@@ -1,3 +1,5 @@
+// TODO: setting: center map on point updates
+
 // DOM object containers for all elements of page
 var obj = {
     map: ebid('map'),
@@ -5,6 +7,7 @@ var obj = {
         panel: ebid('popup'),
         closer: ebid('popup-closer'),
         coords: ebid('cur_coords'),
+        track_specific: ebid('popup_track_specific'),
         sender: ebid('cur_sender'),
         time: ebid('cur_timestamp'),
         speed: ebid('cur_speed'),
