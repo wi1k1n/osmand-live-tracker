@@ -1,6 +1,5 @@
 body {
     width: 100%;
-    /*height: 100%;*/
     overflow: hidden; /* Hide scrollbars */
     margin: unset;
 }
@@ -9,7 +8,7 @@ body {
     min-height: 100vh;
     /*min-width: 94vw;*/
     width: 100%;
-    /*padding: 5px;*/
+    /*padding: 1px;*/
 }
 
 table {
@@ -41,26 +40,26 @@ th {
 }
 /* Cursor info panel */
 .ol-control-panel {
-    width: 180px;
-    height: auto;
-    left: unset;
-    top: unset;
-    right: 8px;
-    bottom: 24px;
-    background-color: rgba(177, 119, 255, 0.8);
+    /*width: 180px;*/
+    /*height: auto;*/
+    /*left: unset;*/
+    /*top: unset;*/
+    /*right: 8px;*/
+    /*bottom: 24px;*/
+    /*background-color: rgba(177, 119, 255, 0.8);*/
     display: none;
 }
-.ol-control-panel:hover {
-    background-color: rgba(177, 119, 255, 0.8);
-}
+/*.ol-control-panel:hover {*/
+/*    background-color: rgba(177, 119, 255, 0.8);*/
+/*}*/
 /* Track info table */
 .ol-control-table {
     width: auto;
     height: auto;
     left: unset;
-    bottom: unset;
-    right: 40px;
-    top: 8px;
+    bottom: 2px;
+    right: 4px;
+    top: unset;
     background-color: rgba(167, 255, 217, 0.8);
     display: block;
 }
@@ -86,9 +85,9 @@ th {
     width: 50%;
     height: 100px;
     right: unset;
-    bottom: unset;
-    left: 120px;
-    top: 8px;
+    bottom: 8px;
+    left: 160px;
+    top: unset;
     background-color: rgba(204, 181, 55, 0.8);
     display: block;
 }

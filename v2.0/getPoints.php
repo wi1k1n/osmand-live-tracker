@@ -1,12 +1,12 @@
 <?php
     require "configuration_my.php";
 
+    // Track uid to filter all entries in DB
+    $track_uid = isset($_GET['track_uid']) ? $_GET['track_uid'] : null;
+
     // Whether the whole table should be sent or only few last updates
     $starting = isset($_GET['starting']) ? $_GET['starting'] : null;
     $ending = isset($_GET['ending']) ? $_GET['ending'] : null;
-
-    header("Access-Control-Allow-Origin: *");
-    header('Content-Type: application/json');
 
     // Connect to database
     $conn = new mysqli($dbHost, $dbUser, $dbPassword, $dbName);
@@ -15,34 +15,15 @@
         die('{"error": "Failed to connect to Database"}');
     }
 
-    // TODO: better behaviour is a separate request for tracks and separate request for only corresponding points
-    // >>> Get table of tracks
-    $tracks = '[';
-    $sql = "SELECT * FROM `osmand_tracks`";
-    $res = $conn->query($sql);
-    if (!$res) die('{"error": "Failed to get data (tracks) from Database"}');
-    if ($res->num_rows === 0) die('{"tracks": [], "points": []}');
-    while ($row = $res->fetch_assoc()) {
-        $tracks = $tracks . '{"uid": ' . $row['uid']
-                         . ', "name": ' . ($row['name'] ? ('"'.$row['name'].'"') : 'null')
-                         . ', "from_lon": ' . ($row['from_lon'] ? ('"'.$row['from_lon'].'"') : 'null')
-                         . ', "from_lat": ' . ($row['from_lat'] ? ('"'.$row['from_lat'].'"') : 'null')
-                         . ', "to_lon": ' . ($row['to_lon'] ? ('"'.$row['to_lon'].'"') : 'null')
-                         . ', "to_lat": ' . ($row['to_lat'] ? ('"'.$row['to_lat'].'"') : 'null')
-                         . '},';
-    }
-    if (is_object($res)) $res->close();
-    $tracks = substr($tracks, 0, strlen($tracks) - 1) . "]";
-
-
     // >>> Get datapoints
-    $sql = "SELECT * FROM `osmand_online`";
+    $sql = "SELECT * FROM `osmand_online`    ";
 
     // Handle $starting, $ending $_GET variables
-    if ($starting || $ending) $sql .= " WHERE";
-    if ($starting) $sql .= " uid > " . $starting . ' AND';
-    if ($ending) $sql .= " uid < " . $ending . ' AND';
-    if ($starting || $ending) $sql = substr($sql, 0, strlen($sql) - 4);
+    if ($starting != null || $ending != null || $track_uid != null) $sql .= " WHERE";
+    if ($track_uid != null) $sql .= " track_uid = " . $track_uid . ' AND';
+    if ($starting != null) $sql .= " uid > " . $starting . ' AND';
+    if ($ending != null) $sql .= " uid < " . $ending . ' AND';
+    $sql = substr($sql, 0, strlen($sql) - 4);
 
     $res = $conn->query($sql);
     if (!$res) die('{"error": "Failed to get data (points) from Database"}');
@@ -66,5 +47,8 @@
         $points = substr($points, 0, strlen($points) - 1) . "]";
     }
 
-    $output = '{"tracks": '.$tracks.', "points": '.$points.'}';
+    $output = '{"points": '.$points.'}';
+
+    header("Access-Control-Allow-Origin: *");
+    header('Content-Type: application/json');
     echo $output;

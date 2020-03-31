@@ -135,7 +135,7 @@
 					[segmDst, cumulativeDst] = getCoordinateDistances(trackLine.getCoordinates());
 					ply_data[0].x = cumulativeDst;
 					ply_data[0].y = ele;
-					Plotly.redraw('height_map_container');
+					Plotly.redraw(height_map_container_obj);
 
 					// Update marker
 					markerPoint.setCoordinates(ol.proj.fromLonLat(coords[coords.length-1]));
@@ -304,12 +304,12 @@
 			displaylogo: false,
 			modeBarButtonsToRemove: ['toImage', 'zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'toggleSpikelines', 'hoverClosestCartesian', 'hoverCompareCartesian', 'resetScale2d']
 		};
-		Plotly.newPlot('height_map_container', ply_data, ply_layout, ply_options);
+		Plotly.newPlot(height_map_container_obj, ply_data, ply_layout, ply_options);
 		function drawHeightmap(ind=null) {
 			let v = cumulativeDst[0];
 			if (ind != null) v = cumulativeDst[ind];
 			ply_shapes[0].x0 = ply_shapes[0].x1 = v;
-			Plotly.relayout('height_map_container', {
+			Plotly.relayout(height_map_container_obj, {
 				'shapes[0]': ply_shapes[0]
 			});
 		}

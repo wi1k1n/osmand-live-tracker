@@ -1,0 +1,120 @@
+function Updater(obj) {
+    this.obj = obj;
+    this.refresh_interval = -1;
+    this.refresh_interval_id = null;
+    this.callback = null;
+
+    this.tracks = null;
+    this.selectedTrack = null;
+    this.points = [];
+
+    obj.refresh.button.onclick = (function() { this.updateData.bind(this)(this.callback); }).bind(this);
+    obj.refresh.interval.onchange = this._onRefreshIntervalChanged.bind(this);
+    this._onRefreshIntervalChanged()
+}
+
+Updater.prototype.loadData = function(callback=null) {
+    // Is supposed to be called once at the very beginning (alerts all unexpected behaviour)
+    this.callback = callback;
+    this._updateTracks((function(d) {
+        if (d.length == 0) {
+            alert('No tracks found!');
+            return;
+        }
+        this.selectedTrack = this.tracks.find(x => x.uid == Math.max(...this.tracks.map(x => x.uid)));
+        // this.selectedTrack = this.tracks[this.tracks.length-1];
+        let ending = null;
+        if (DEBUG) ending = DEBUG_DATABATCH;
+        this._requestPoints(this.selectedTrack.uid, null, ending, (function(p) {
+            if (p.length == 0) {
+                alert('There are no points to load! Please try later, when data is going to appear!');
+                return;
+            }
+            this.points = p;
+            callback();
+        }).bind(this));
+    }.bind(this)));
+};
+Updater.prototype.updateData = function(callback=null, auto=null) {
+    console.log('upd.updateData' + (auto ? ' (auto)' : ''));
+    // Updates current list of points with new ones
+    let starting = null;
+    let ending = null;
+    if (this.points.length > 0) starting = this.points[this.points.length-1].uid;
+    if (DEBUG && starting != null) ending = starting + DEBUG_DATABATCH;
+    this._requestPoints(this.selectedTrack.uid, starting, ending, (function(p) {
+        if (!auto) this._setUpdateInterval(); // restart interval timer if manually clicked
+        if (p.length == 0) return;
+        this.points = this.points.concat(p);
+        if (callback) callback();
+    }).bind(this));
+};
+
+Updater.prototype._updateTracks = function(callback=null) {
+    // Retrieves tracks list from server and stores in this.tracks
+    let url = URL_GETTRACKS;
+    this._getJSON(url, (function (e, d) {
+        if (!this._handleJSONResponse(e, d, url, ['tracks'])) return;
+        this.tracks = d.tracks;
+        if (callback) callback(this.tracks);
+    }).bind(this));
+};
+Updater.prototype._requestPoints = function(track_uid, starting, ending, callback) {
+    // Careful, this method does not assign points to internal variable this.points!
+    let url = URL_GETPOINTS + '?track_uid=' + track_uid;
+    if (starting != null) url += '&starting=' + starting;
+    if (ending != null) url += '&ending=' + ending;
+    this._getJSON(url, (function (e, d) {
+        if (!this._handleJSONResponse(e, d, url, ['points'])) return;
+        if (callback) callback(d.points);
+    }).bind(this));
+};
+
+Updater.prototype._setUpdateInterval = function() {
+    // console.log('_setUpdateInterval: ' + this.refresh_interval);
+    if (this.refresh_interval_id)
+        window.clearInterval(this.refresh_interval_id);
+    if (this.refresh_interval > 0) {
+        this.refresh_interval_id = window.setInterval(this.updateData.bind(this), this.refresh_interval, this.callback, true);
+    }
+};
+Updater.prototype._onRefreshIntervalChanged = function() {
+    // console.log('_onRefreshIntervalChanged');
+    this.refresh_interval = parseInt(obj.refresh.interval.options[obj.refresh.interval.selectedIndex].value);
+    this._setUpdateInterval();
+};
+Updater.prototype._getJSON = function(url, callback) {
+    // Simply makes an AJAX request
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'json';
+    xhr.onload = function () {
+        let status = xhr.status;
+        if (status === 200) callback(null, xhr.response);
+        else callback(status);
+    };
+    xhr.send();
+};
+Updater.prototype._handleJSONResponse = function(e, d, url, arr_keys) {
+    // Takes err and data return values after getJSON request, and handles it properly
+    if (e != null || d == null) {
+        alert('Could not update data!');
+        console.error('Requested url: ' + url);
+        console.error(e);
+        return false;
+    }
+    if ('error' in d) {
+        alert('Could not update data! Error occurred!');
+        console.error('Requested url: ' + url);
+        console.error(d['error']);
+        return false;
+    }
+    // if (!('tracks' in d)) {
+    if (!arr_keys.every(v => v in d)) {
+        alert('Loaded data is invalid!');
+        console.error('Requested url: ' + url);
+        console.error(d);
+        return false;
+    }
+    return true;
+};

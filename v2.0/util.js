@@ -1,15 +1,8 @@
-// Simply makes an AJAX request
-var getJSON = function(url, callback) {
-    let xhr = new XMLHttpRequest();
-	xhr.open('GET', url, true);
-	xhr.responseType = 'json';
-	xhr.onload = function() {
-		let status = xhr.status;
-		if (status === 200) callback(null, xhr.response);
-		else callback(status);
-	};
-	xhr.send();
-};
+// alias for document.getElementById
+function ebid(id) {
+	return document.getElementById(id);
+}
+
 var getFormattedDate = function() {
 	let d = new Date();
 	d = d.getFullYear() + "-" + ('0' + (d.getMonth() + 1)).slice(-2) + "-" + ('0' + d.getDate()).slice(-2) + " " + ('0' + d.getHours()).slice(-2) + ":" + ('0' + d.getMinutes()).slice(-2) + ":" + ('0' + d.getSeconds()).slice(-2);
@@ -19,11 +12,6 @@ var getFormattedDate = function() {
 // Takes waypoints dictionary and returns lon/lat array
 var waypoints2coords = function(wps) {
 	return wps.map(x => [x['lon'], x['lat']]);
-	// let coords = [wps.length];
-	// for (let i = 0; i < wps.length; i++) {
-	// 	coords[i] = [wps[i]['lon'], wps[i]['lat']];
-	// }
-	// return coords;
 };
 
 var getCoordinateDistances = function(coords) {
@@ -87,12 +75,6 @@ var categorizeHDOP = function(hdop) {
 
 
 // Styles for map
-var styleTrack = new ol.style.Style({
-	stroke: new ol.style.Stroke({
-		color: 'rgb(255, 0, 0)',
-		width: 4
-	})
-});
 var styleMarker = new ol.style.Style({
 	image: new ol.style.Icon({
 		anchor: [0.5, 1],
