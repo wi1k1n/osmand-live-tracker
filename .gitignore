@@ -1,4 +1,4 @@
 .idea/
 test/
-v2.0/configuration_my.php
-settings_my.php
+configuration_my.php
+legacy/settings_my.php

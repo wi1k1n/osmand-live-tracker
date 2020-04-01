@@ -1,5 +1,6 @@
-// TODO: setting: center map on point updates
-
+// TODO: settings: center map on point updates
+// TODO: settings: turn on/off graph
+// TODO: help button
 // DOM object containers for all elements of page
 var obj = {
     map: ebid('map'),
