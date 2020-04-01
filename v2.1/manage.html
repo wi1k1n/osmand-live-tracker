@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Bootstrap Example</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/css/ol.css" type="text/css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/build/ol.js"></script>
+
+    <style>
+        .map {
+            position: relative;
+            width: 100%;		/* desired width */
+            height: 100%;
+            min-height: 256px;
+         }
+        .jumbotron {
+            padding: 2em;
+        }
+    </style>
+    <script type="text/javascript" src="test/track.js"></script>
+</head>
+<body>
+
+<div class="jumbotron text-center">
+    <h1>Track My Bike Control Panel</h1>
+<!--    <p>You</p>-->
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div id="map" class="map"></div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="dropdown">
+                <button type="button" class="btn btn-outline-dark btn-block dropdown-toggle" data-toggle="dropdown">Track 1</button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#">Track 2</a>
+                    <a class="dropdown-item" href="#">Track 3</a>
+                    <a class="dropdown-item" href="#">Track 4</a>
+                </div>
+            </div>
+            <div class="list-group mt-3">
+                <div class="list-group-item">Started on: unknown</div>
+                <div class="list-group-item">Finished on: unknown</div>
+                <div class="list-group-item">Travelled: unknown</div>
+            </div>
+            <div class="btn-group mt-3 d-flex">
+                <button class="btn btn-lg btn-primary" type="button">Enable</button>
+                <button class="btn btn-lg btn-info" type="button">Set default</button>
+                <button class="btn btn-lg btn-danger" type="button">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    var obj = {
+        map: document.getElementById('map')
+    };
+
+    var trackLine = new ol.geom.LineString(data.points.map(x => ol.proj.fromLonLat([x.lon, x.lat])));
+    var sourceTrack = new ol.source.Vector({});
+    sourceTrack.addFeature(new ol.Feature(trackLine));
+    var styleTrack = new ol.style.Style({
+        stroke: new ol.style.Stroke({
+            color: 'rgb(255, 0, 0)',
+            width: 4
+        })
+    });
+    var layerTrack = new ol.layer.Vector({
+        name: 'Track',
+        source: sourceTrack,
+        style: styleTrack
+    });
+    var map = new ol.Map({
+        target: obj.map,
+        layers: [
+            new ol.layer.Tile({
+                name: 'Tile',
+                source: new ol.source.OSM()
+            }),
+            this.layerTrack,
+        ],
+        view: new ol.View({
+            center: [2338580, 4040532],
+            zoom: 2.5,
+            maxZoom: 19
+        }),
+        controls: ol.control.defaults().extend([
+            new ol.control.ScaleLine({bar: true, text: false, steps: 2}),
+            new ol.control.FullScreen()
+        ])
+    });
+    map.getView().fit(trackLine, {padding: [20, 20, 20, 20]});
+</script>
+</body>
+</html>

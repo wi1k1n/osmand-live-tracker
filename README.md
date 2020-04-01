@@ -43,6 +43,7 @@ CREATE TABLE `osmand_tracks` (
     `from_lat` float DEFAULT NULL,
     `to_lon` float DEFAULT NULL,
     `to_lat` float DEFAULT NULL,
+    `hidden` boolean NOT NULL DEFAULT FALSE
     PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 ```
@@ -57,7 +58,7 @@ CREATE TABLE `osmand_online` (
     `altitude` float DEFAULT NULL,
     `speed` float DEFAULT NULL,
     `sender` varchar(256) COLLATE utf8_unicode_ci DEFAULT NULL,
-    `track_uid` int(11) NOT NULL,
+    `track_uid` int(11) NOT NULL
     PRIMARY KEY (`uid`),
     CONSTRAINT `fk_track` FOREIGN KEY (`track_uid`) REFERENCES `osmand_tracks` (`uid`)
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

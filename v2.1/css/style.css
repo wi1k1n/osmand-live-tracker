@@ -53,6 +53,9 @@ th {
 .ol-control-table:hover {
     background-color: rgba(167, 255, 217, 0.8);
 }
+.ol-touch .ol-control-table {
+    bottom: 180px;
+}
 /* Refresh panel */
 .ol-control-refresh {
     width: auto;

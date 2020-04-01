@@ -10,7 +10,7 @@
 
     // >>> Get table of tracks
     $tracks = '[';
-    $sql = "SELECT * FROM `osmand_tracks`";
+    $sql = "SELECT * FROM `osmand_tracks` WHERE ~hidden";
     $res = $conn->query($sql);
     if (!$res) die('{"error": "Failed to get data (tracks) from Database"}');
     if ($res->num_rows === 0) die('{"tracks": []');

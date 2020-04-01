@@ -1,7 +1,8 @@
 function Updater(obj) {
     this.obj = obj;
     this.refresh_interval = -1;
-    this.refresh_interval_id = null;
+    this.refresh_interval_id = null; // setInterval returns ID, which is stored here
+    this.waitingData = false;
 
     this.onDataLoaded = null;
     this.onDataUpdated = null;
@@ -40,6 +41,8 @@ Updater.prototype.loadData = function() {
 };
 Updater.prototype.updateData = function(auto=null) {
     // console.log('upd.updateData' + (auto ? ' (auto)' : ''));
+    if (this.waitingData) return; // Deny all updates, if we are still waiting response from server
+    this.waitingData = true;
     // Updates current list of points with new ones
     let starting = null;
     let ending = null;
@@ -51,6 +54,7 @@ Updater.prototype.updateData = function(auto=null) {
             this.points = this.points.concat(p);
         this.pointsNewLength = p.length;
         if (this.onDataUpdated) this.onDataUpdated();
+        this.waitingData = false;
     }).bind(this));
 };
 Updater.prototype.loadTrack = function(track) {
