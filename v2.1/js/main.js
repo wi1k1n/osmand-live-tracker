@@ -1,6 +1,12 @@
+// TODO: graph x-axis labelling
+// TODO: graph against time (+ settings: toggle x: dst or time)
+// TODO: clickable marker
 // TODO: settings: center map on point updates
 // TODO: settings: turn on/off graph
+// TODO: settings: floating info
 // TODO: help button
+// TODO: visitors section
+
 // DOM object containers for all elements of page
 var obj = {
     map: ebid('map'),

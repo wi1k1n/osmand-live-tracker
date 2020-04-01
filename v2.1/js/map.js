@@ -122,11 +122,13 @@ Tracker.prototype.updateTrack = function(new_points) {
     if (new_points.length === 0) return;
 
     // Add coordinates to trackLine
-    let llCoords = new_points.map(x => [x.lon, x.lat]);
+    // let llCoords = new_points.sort((a, b) => a.uid > b.uid).map(x => [x.lon, x.lat]);
+    let llCoords = this.upd.points.map(x => [x.lon, x.lat]);
     let mCoords = llCoords.map(x => ol.proj.fromLonLat(x));
-    mCoords.forEach((function(p) {
-        this.trackLine.appendCoordinate(p);
-    }).bind(this));
+    // mCoords.forEach((function(p) {
+    //     this.trackLine.appendCoordinate(p);
+    // }).bind(this));
+    this.trackLine.setCoordinates(this.trackLine.getCoordinates().concat(mCoords));
 
     // Update marker position
     this.markerPoint.setCoordinates(mCoords[mCoords.length-1]);

@@ -7,4 +7,4 @@ const TIMESTAMP_CLASSNAMES = ['timestamp-log', 'timestamp-server'];
 const TIMESTAMP_SERVER_TITLE = 'This is a timestamp of request (not measurement)';
 
 const DEBUG = true;
-const DEBUG_DATABATCH = 1500;
+const DEBUG_DATABATCH = 10;
