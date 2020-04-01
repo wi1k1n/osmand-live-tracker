@@ -2,6 +2,11 @@
 
 OsmAnd is a powerful navigation application. Android version contains*Trip recording* plugin, which allows storing tracks as GPX-files as well as posting current GPS-data to remote server.
 
+This application consists of:
+* server part (php-based) for online storing data that is being posted by OsmAnd navigator from your cell phone
+* client part (html- and js-based) for dynamically draw track on map
+    * Client web-page contains minimal analysis tool, which draws elevation/speed graph against travelled distance (check screenshot section) 
+
 ## Prerequisites
 In order to make this code work, you will need a web server. You can use either web-server on your local machine (e.g. [WampServer](http://www.wampserver.com/en/) or [LightTPD](https://www.lighttpd.net/)) or on virtual server (e.g. [DigitalOcean Droplet](https://www.digitalocean.com/)), or any other web-hosting (e.g. free [000webhost](https://www.000webhost.com/)).
 
@@ -9,7 +14,7 @@ The key requirements are:
 1. PHP support
 2. Database support (e.g. MySQL)
 
-#### Additional libraries
+### Additional libraries
 The following additional libraries are used:
 1. [OpenLayers](https://openlayers.org/) for dynamic map implementation.
 2. [Plotly.JS](https://plotly.com/javascript/) for dynamic graph visualization
