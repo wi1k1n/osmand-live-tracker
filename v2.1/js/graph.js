@@ -56,7 +56,17 @@ function Graph(map) {
         modeBarButtonsToRemove: ['toImage', 'zoom2d', 'pan2d', 'select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'toggleSpikelines', 'hoverClosestCartesian', 'hoverCompareCartesian', 'resetScale2d'],
         responsive: true
     };
-    Plotly.newPlot(this.obj.graph, this.ply_data, this.ply_layout, ply_options);
+    Plotly.newPlot(this.obj.graph, this.ply_data, this.ply_layout, ply_options).then((function() {
+        // https://codepen.io/etpinard/pen/EyydEj
+        // let xaxis = this.obj.graph._fullLayout.xaxis;
+        // let ml = this.obj.graph._fullLayout.margin.l;
+        // let ol = this.obj.graph.offsetLeft;
+        //
+        // this.obj.graph.addEventListener('mousemove', (function(evt) {
+        //     let xInDataCoord = xaxis.p2c(evt.x - ol - ml);
+        //     this.obj.trackInfo.speed.innerText = xInDataCoord;
+        // }).bind(this));
+    }).bind(this));
 
 
     this.obj.graph.on('plotly_hover', (function(d) {
