@@ -2,24 +2,24 @@
 
 OsmAnd is a powerful navigation application. Android version contains*Trip recording* plugin, which allows storing tracks as GPX-files as well as posting current GPS-data to remote server.
 
-##Prerequisites
+## Prerequisites
 In order to make this code work, you will need a web server. You can use either web-server on your local machine (e.g. [WampServer](http://www.wampserver.com/en/) or [LightTPD](https://www.lighttpd.net/)) or on virtual server (e.g. [DigitalOcean Droplet](https://www.digitalocean.com/)), or any other web-hosting (e.g. free [000webhost](https://www.000webhost.com/)).
 
 The key requirements are:
 1. PHP support
 2. Database support (e.g. MySQL)
 
-####Additional libraries
+#### Additional libraries
 The following additional libraries are used:
 1. [OpenLayers](https://openlayers.org/) for dynamic map implementation.
 2. [Plotly.JS](https://plotly.com/javascript/) for dynamic graph visualization
 
 However, you don't need to download anything. Online versions of libraries are used.
 
-##Screenshot
+## Screenshot
 ![](img/screenshot.jpg)
 
-##Getting Started
+## Getting Started
 All necessary files are located in *v2.1/* folder.
 1. Just get the content of repo using `git clone https://github.com/ilyko96/osmand-live-tracker.git`.
 2. Get access to database. You will need 4 database values:
@@ -69,7 +69,7 @@ url_to_your_web.server/track.php?lat={0}&lon={1}&timestamp={2}&hdop={3}&altitude
 9. Navigate to `url_to_your_web.server/index.html`
 10. Enjoy!
 
-##Troubleshooting
+## Troubleshooting
 > No data is being stored in DB
 
 Try to navigate to the URL from 7. manually using browser (and making some fake data), and check the response. Usually you can see what is wrong there.
