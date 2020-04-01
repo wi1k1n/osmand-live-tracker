@@ -12,9 +12,13 @@ function Updater(obj) {
     this.points = [];
     this.pointsNewLength = 0;
 
-    obj.refresh.button.onclick = (function() { this.updateData.bind(this)(); }).bind(this);
-    obj.refresh.interval.onchange = this._onRefreshIntervalChanged.bind(this);
-    this._onRefreshIntervalChanged()
+    if (obj.refresh) { // This is for using updater.js in manage.html
+        obj.refresh.button.onclick = (function () {
+            this.updateData.bind(this)();
+        }).bind(this);
+        obj.refresh.interval.onchange = this._onRefreshIntervalChanged.bind(this);
+        this._onRefreshIntervalChanged()
+    }
 }
 
 Updater.prototype.loadData = function() {

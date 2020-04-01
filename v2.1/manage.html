@@ -22,7 +22,9 @@
             padding: 2em;
         }
     </style>
-    <script type="text/javascript" src="test/track.js"></script>
+<!--    <script type="text/javascript" src="test/track.js"></script>-->
+    <script type="text/javascript" src="js/constants.js"></script>
+    <script type="text/javascript" src="js/updater.js"></script>
 </head>
 <body>
 
@@ -36,10 +38,10 @@
         <div class="col-md-6 mb-3">
             <div id="map" class="map"></div>
         </div>
-        <div class="col-md-6 mb-3">
+        <div class="col-md-6 mb-3 ">
             <div class="dropdown">
                 <button type="button" class="btn btn-outline-dark btn-block dropdown-toggle" data-toggle="dropdown">Track 1</button>
-                <div class="dropdown-menu">
+                <div class="dropdown-menu w-100 text-center">
                     <a class="dropdown-item" href="#">Track 2</a>
                     <a class="dropdown-item" href="#">Track 3</a>
                     <a class="dropdown-item" href="#">Track 4</a>
@@ -63,7 +65,8 @@
         map: document.getElementById('map')
     };
 
-    var trackLine = new ol.geom.LineString(data.points.map(x => ol.proj.fromLonLat([x.lon, x.lat])));
+    // var trackLine = new ol.geom.LineString(data.points.map(x => ol.proj.fromLonLat([x.lon, x.lat])));
+    var trackLine = new ol.geom.LineString([]);
     var sourceTrack = new ol.source.Vector({});
     sourceTrack.addFeature(new ol.Feature(trackLine));
     var styleTrack = new ol.style.Style({
@@ -96,7 +99,13 @@
             new ol.control.FullScreen()
         ])
     });
-    map.getView().fit(trackLine, {padding: [20, 20, 20, 20]});
+    // map.getView().fit(trackLine, {padding: [20, 20, 20, 20]});
+
+    var upd = new Updater(obj);
+    upd.onDataLoaded = function() {
+        alert(upd.tracks.length + ' tracks loaded!');
+    };
+    upd.loadData()
 </script>
 </body>
 </html>
