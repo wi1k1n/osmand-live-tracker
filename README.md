@@ -16,8 +16,11 @@ The following additional libraries are used:
 
 However, you don't need to download anything. Online versions of libraries are used.
 
-##Getting Started
+##Screenshot
+![](img/screenshot.jpg)
 
+##Getting Started
+All necessary files are located in *v2.1/* folder.
 1. Just get the content of repo using `git clone https://github.com/ilyko96/osmand-live-tracker.git`.
 2. Get access to database. You will need 4 database values:
     * Database name
