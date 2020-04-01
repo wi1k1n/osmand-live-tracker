@@ -47,11 +47,16 @@ Updater.prototype.updateData = function(auto=null) {
     if (DEBUG && starting != null) ending = starting + DEBUG_DATABATCH;
     this._requestPoints(this.selectedTrack.uid, starting, ending, (function(p) {
         if (!auto) this._setUpdateInterval(); // restart interval timer if manually clicked
+        if (p.length > 0)
+            this.points = this.points.concat(p);
         this.pointsNewLength = p.length;
         if (this.onDataUpdated) this.onDataUpdated();
-        if (p.length === 0) return;
-        this.points = this.points.concat(p);
     }).bind(this));
+};
+Updater.prototype.loadTrack = function(track) {
+    this.selectedTrack = track;
+    this.points = [];
+    this.updateData();
 };
 
 Updater.prototype.getLatestUpdatePoints = function() {
@@ -93,6 +98,7 @@ Updater.prototype._onRefreshIntervalChanged = function() {
     this._setUpdateInterval();
 };
 Updater.prototype._getJSON = function(url, callback) {
+    // console.log('Requesting: ' + url);
     // Simply makes an AJAX request
     let xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);

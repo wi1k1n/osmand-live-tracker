@@ -22,7 +22,7 @@
     if ($starting != null || $ending != null || $track_uid != null) $sql .= " WHERE";
     if ($track_uid != null) $sql .= " track_uid = " . $track_uid . ' AND';
     if ($starting != null) $sql .= " uid > " . $starting . ' AND';
-    if ($ending != null) $sql .= " uid < " . $ending . ' AND';
+    if ($ending != null) $sql .= " uid <= " . $ending . ' AND';
     $sql = substr($sql, 0, strlen($sql) - 4);
 
     $res = $conn->query($sql);

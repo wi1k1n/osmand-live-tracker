@@ -43,3 +43,17 @@ var obj = {
 };
 
 var map = new Tracker(obj);
+
+obj.trackInfo.name.onclick = function(e) {
+    if (map.upd.tracks.length < 2) return;
+    let strTracks = '';
+    map.upd.tracks.forEach(function(t) {
+        strTracks += '[' + t.uid + '] ' + t.name + '\n';
+    });
+    let ind = parseInt(prompt('Please, choose one of the following tracks:\n' + strTracks.substr(0, strTracks.length-1)));
+    if (ind === map.upd.selectedTrack.uid) return;
+    let track = map.upd.tracks.find(x => x.uid === ind);
+    if (track) {
+        map.reloadTrack(track);
+    }
+};

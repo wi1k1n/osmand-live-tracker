@@ -122,13 +122,11 @@ Tracker.prototype.updateTrack = function(new_points) {
     if (new_points.length === 0) return;
 
     // Add coordinates to trackLine
-    // let llCoords = new_points.sort((a, b) => a.uid > b.uid).map(x => [x.lon, x.lat]);
-    let llCoords = this.upd.points.map(x => [x.lon, x.lat]);
+    let llCoords = new_points.sort((a, b) => a.uid - b.uid).map(x => [x.lon, x.lat]);
     let mCoords = llCoords.map(x => ol.proj.fromLonLat(x));
-    // mCoords.forEach((function(p) {
-    //     this.trackLine.appendCoordinate(p);
-    // }).bind(this));
-    this.trackLine.setCoordinates(this.trackLine.getCoordinates().concat(mCoords));
+    mCoords.forEach((function(p) {
+        this.trackLine.appendCoordinate(p);
+    }).bind(this));
 
     // Update marker position
     this.markerPoint.setCoordinates(mCoords[mCoords.length-1]);
@@ -144,7 +142,7 @@ Tracker.prototype.updateTrack = function(new_points) {
     let cumDsts = new Array(dstCoords.length);
     cumDsts[0] = this.cumulativeDistances[this.cumulativeDistances.length-1];
     for (let i = 0, j = 1; i < dstCoords.length - 1; i++, j++) {
-        let dst = ol.sphere.getDistance(dstCoords[i], dstCoords[j]);
+        let dst = ol.sphere.getDistance(dstCoords[i], dstCoords[j]) / 1000.0;
         segmentDsts[i] = dst;
         cumDsts[j] = cumDsts[i] + dst;
     }
@@ -219,6 +217,24 @@ Tracker.prototype.updateVisuals = function(e) {
             this.closePopup();
     }
 };
+Tracker.prototype.reloadTrack = function(track) {
+    this.clear();
+    this.upd.loadTrack(track);
+};
+Tracker.prototype.clear = function() {
+    this.segmentDistances = [];
+    this.cumulativeDistances = [0];
+    this.ele = [];
+    this.speed = [];
+
+    this.popupFixed = false;
+
+    this.trackLine.setCoordinates([]);
+    this.markerPoint.setCoordinates([]);
+    this.cursorPoint.setCoordinates([]);
+
+    this.graph.updateData();
+};
 
 Tracker.prototype.updatePopupInfo = function(vals) {
     let hdms = ol.coordinate.toStringHDMS(ol.proj.toLonLat(vals.point)).replace(/\s/g, '').replace(/N/g, 'N ');
@@ -236,20 +252,22 @@ Tracker.prototype.updatePopupInfo = function(vals) {
 };
 Tracker.prototype.updateTrackInfo = function() {
     let lwp = this.upd.points[this.upd.points.length - 1]; // last waypoint
+    if (lwp) {
+        if (lwp.timestamp_log) obj.trackInfo.timeStart.innerText = this.upd.points[0].timestamp_log;
+        else if (lwp.timestamp_server) obj.trackInfo.timeStart.innerText = this.upd.points[0].timestamp_server + ' (request time)';
+        else obj.trackInfo.timeStart.innerText = "unknown";
+        // Update last_update
+        if (lwp.timestamp_log) obj.trackInfo.time.innerText = lwp.timestamp_log;
+        else if (lwp.timestamp_server) obj.trackInfo.time.innerText = lwp.timestamp_server + ' (request time)';
+        else obj.trackInfo.time.innerText = "unknown";
+        // Update current_speed
+        if (lwp.speed) obj.trackInfo.speed.innerText = Number(parseFloat(lwp.speed) * 3.6).toFixed(1) + " km/h";
+        else obj.trackInfo.speed.innerText = "unknown";
+    }
+
     obj.trackInfo.name.innerText = this.upd.selectedTrack.name;
-    if (lwp.timestamp_log) obj.trackInfo.timeStart.innerText = this.upd.points[0].timestamp_log;
-    else if (lwp.timestamp_server) obj.trackInfo.timeStart.innerText = this.upd.points[0].timestamp_server + ' (request time)';
-    else obj.trackInfo.timeStart.innerText = "unknown";
-    // Update last_update
-    if (lwp.timestamp_log) obj.trackInfo.time.innerText = lwp.timestamp_log;
-    else if (lwp.timestamp_server) obj.trackInfo.time.innerText = lwp.timestamp_server + ' (request time)';
-    else obj.trackInfo.time.innerText = "unknown";
-    // Update current_speed
-    if (lwp.speed)  obj.trackInfo.speed.innerText = Number(parseFloat(lwp.speed) * 3.6).toFixed(1) + " km/h";
-    else obj.trackInfo.speed.innerText = "unknown";
     // Update travelled distance
     obj.trackInfo.distance.innerText = formatDistance(ol.sphere.getLength(this.trackLine));
-
     obj.trackInfo.lastRefresh.innerText = getFormattedDate();
 };
 
