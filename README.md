@@ -58,6 +58,7 @@ CREATE TABLE `osmand_online` (
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 ```
 Of course, you are not limited by phpMyAdmin. Please, use your favorite way to create SQL tables.
+
 6. Upload files to web-server.
 7. Set up your OsmAnd navigator to post your GPS-data
     * Go to *Settings => Plugins => Trip recording => Settings => Online tracking web address* and add URL to your web-server in the following format: 
