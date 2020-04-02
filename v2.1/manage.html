@@ -87,6 +87,11 @@
         </div>
     </div>
 </div>
+
+<div class="alert alert-warning" id="wrong_key_alert" style="display: none;">
+    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+    <strong>Warning!</strong> Entered secret key is wrong!
+</div>
 <script>
     const SPINNER_HTML = '<span class="spinner-border spinner-border-sm"></span>    Loading..';
     var obj = {
@@ -148,6 +153,8 @@
         // If enable buttons in case authentication was successful
         if (upd.key_result)
             $('.btn-super-control').removeAttr('disabled');
+        else
+            $('#wrong_key_alert').show();
 
         // Change corresponding information on page
         upd.onDataUpdated();
@@ -164,6 +171,7 @@
     $(document).ready(function(){
         // Show modal at the very beginning
         $('#password_modal').modal();
+        $('#wrong_key_alert').hide();
     });
 
 
@@ -214,8 +222,10 @@
             obj.distance.innerText = 'unknown';
         }
 
-        $('#enable_btn').html(track.hidden ? 'Enable' : 'Disable');
-        $('#default_btn').attr('disabled', Math.max(...upd.tracks.map(x => x.uid)) === track.uid);
+        if (upd.key_result) {
+            $('#enable_btn').html(track.hidden ? 'Enable' : 'Disable');
+            $('#default_btn').attr('disabled', Math.max(...upd.tracks.map(x => x.uid)) === track.uid);
+        }
     }
     function setLoadingStatus() {
         obj.selectTrack_btn.innerHTML = SPINNER_HTML;
