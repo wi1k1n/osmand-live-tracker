@@ -21,9 +21,15 @@
         .jumbotron {
             padding: 2em;
         }
+
+        button:disabled {
+             cursor: not-allowed;
+             pointer-events: all !important;
+         }
     </style>
 <!--    <script type="text/javascript" src="test/track.js"></script>-->
     <script type="text/javascript" src="js/constants.js"></script>
+    <script type="text/javascript" src="js/util.js"></script>
     <script type="text/javascript" src="js/updater.js"></script>
 </head>
 <body>
@@ -33,6 +39,31 @@
 <!--    <p>You</p>-->
 </div>
 
+<!-- Modal -->
+<div class="modal" id="password_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true"  data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLongTitle">Enter secret key:</h5>
+<!--                <button type="button" class="close" data-dismiss="modal" aria-label="Close">-->
+<!--                    <span aria-hidden="true">&times;</span>-->
+<!--                </button>-->
+            </div>
+            <form action="javascript:onPwdSubmit();">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <input type="password" class="form-control" placeholder="Password" required="required" id="pwd_field">
+                    </div>
+                </div>
+                <div class="modal-footer">
+    <!--                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>-->
+                    <button type="submit" class="btn btn-primary" id="pwd_submit">Continue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="container">
     <div class="row">
         <div class="col-md-6 mb-3">
@@ -40,32 +71,35 @@
         </div>
         <div class="col-md-6 mb-3 ">
             <div class="dropdown">
-                <button type="button" class="btn btn-outline-dark btn-block dropdown-toggle" data-toggle="dropdown">Track 1</button>
-                <div class="dropdown-menu w-100 text-center">
-                    <a class="dropdown-item" href="#">Track 2</a>
-                    <a class="dropdown-item" href="#">Track 3</a>
-                    <a class="dropdown-item" href="#">Track 4</a>
-                </div>
+                <button type="button" class="btn btn-outline-dark btn-block dropdown-toggle" data-toggle="dropdown" id="selectedTrack_button" disabled>No tracks</button>
+                <div class="dropdown-menu w-100 text-center" id="track_list"></div>
             </div>
             <div class="list-group mt-3">
-                <div class="list-group-item">Started on: unknown</div>
-                <div class="list-group-item">Finished on: unknown</div>
-                <div class="list-group-item">Travelled: unknown</div>
+                <div class="list-group-item">Started on: <span id="started_time">unknown</span></div>
+                <div class="list-group-item">Finished on: <span id="finished_time">unknown</span></div>
+                <div class="list-group-item">Travelled: <span id="distance">unknown</span></div>
             </div>
             <div class="btn-group mt-3 d-flex">
-                <button class="btn btn-lg btn-primary" type="button">Enable</button>
-                <button class="btn btn-lg btn-info" type="button">Set default</button>
-                <button class="btn btn-lg btn-danger" type="button">Delete</button>
+                <button class="btn btn-lg btn-primary btn-super-control" type="button" id="enable_btn" disabled>Enable</button>
+                <button class="btn btn-lg btn-info btn-super-control" type="button" id="default_btn" disabled>Set default</button>
+                <button class="btn btn-lg btn-danger btn-super-control" type="button" id="delete_btn" disabled>Delete</button>
             </div>
         </div>
     </div>
 </div>
 <script>
+    const SPINNER_HTML = '<span class="spinner-border spinner-border-sm"></span>    Loading..';
     var obj = {
-        map: document.getElementById('map')
+        map: document.getElementById('map'),
+        track_list: document.getElementById('track_list'),
+        selectTrack_btn: document.getElementById('selectedTrack_button'),
+        started_time: document.getElementById('started_time'),
+        finished_time: document.getElementById('finished_time'),
+        distance: document.getElementById('distance'),
+        password_modal: document.getElementById('password_modal')
     };
+    var KEY = null;
 
-    // var trackLine = new ol.geom.LineString(data.points.map(x => ol.proj.fromLonLat([x.lon, x.lat])));
     var trackLine = new ol.geom.LineString([]);
     var sourceTrack = new ol.source.Vector({});
     sourceTrack.addFeature(new ol.Feature(trackLine));
@@ -99,13 +133,108 @@
             new ol.control.FullScreen()
         ])
     });
-    // map.getView().fit(trackLine, {padding: [20, 20, 20, 20]});
+
+    var dropDownBtns = [];
 
     var upd = new Updater(obj);
-    upd.onDataLoaded = function() {
-        alert(upd.tracks.length + ' tracks loaded!');
+    upd.onDataLoaded = function() { // Is called once when tracks + default_track points are loaded
+        // Creating buttons for drop down list
+        dropDownBtns = [];
+        upd.tracks.forEach(function(t) {
+            let btn = createTrackButton(t);
+            dropDownBtns.push(btn);
+            obj.track_list.appendChild(btn);
+        });
+        // If enable buttons in case authentication was successful
+        if (upd.key_result)
+            $('.btn-super-control').removeAttr('disabled');
+
+        // Change corresponding information on page
+        upd.onDataUpdated();
     };
-    upd.loadData()
+    upd.onDataUpdated = function() { // Is called whenever user changes track
+        if (upd.tracks.length === 0) {
+            alert('No tracks found!');
+            return;
+        }
+        // Change info on page
+        selectTrack(upd.selectedTrack);
+    };
+
+    $(document).ready(function(){
+        // Show modal at the very beginning
+        $('#password_modal').modal();
+    });
+
+
+    function onPwdSubmit(e) { // Is called when user submits secret key
+        KEY = $('#pwd_field').val();
+
+        // Load data
+        setLoadingStatus();
+        upd.loadData(KEY);
+
+        // Close modal
+        $('#password_modal').modal('hide');
+    }
+    function onDropDownSelected(evt) {
+        // Skip, if selected same track
+        if (upd.selectedTrack.uid === this.track.uid) return;
+
+        // Update track
+        setLoadingStatus();
+        upd.loadTrack(this.track);
+    }
+
+    function selectTrack(track) {
+        // Update dropdown info
+        obj.selectTrack_btn.innerText = formatDropDownName(track);
+        obj.selectTrack_btn.disabled = false;
+        obj.track_list.innerHTML = '';
+        dropDownBtns.forEach(function(e) {
+            if (e.uid === track.uid) return;
+            obj.track_list.appendChild(e);
+        });
+
+        // Draw map
+        let mCoords = upd.points.map(x => ol.proj.fromLonLat([x.lon, x.lat]));
+        trackLine.setCoordinates(mCoords);
+        map.getView().fit(trackLine, {padding: [50, 50, 50, 50]});
+
+        // Update list info
+        if (upd.points.length > 0) {
+            let fp = upd.points[0];
+            let lp = upd.points[upd.points.length - 1];
+            obj.started_time.innerText = fp.timestamp_log ? fp.timestamp_log : (fp.timestamp_server + '*');
+            obj.finished_time.innerText = lp.timestamp_log ? lp.timestamp_log : (lp.timestamp_server + '*');
+            obj.distance.innerText = formatDistance(ol.sphere.getLength(trackLine));
+        } else {
+            obj.started_time.innerText = 'unknown';
+            obj.finished_time.innerText = 'unknown';
+            obj.distance.innerText = 'unknown';
+        }
+
+        $('#enable_btn').html(track.hidden ? 'Enable' : 'Disable');
+        $('#default_btn').attr('disabled', Math.max(...upd.tracks.map(x => x.uid)) === track.uid);
+    }
+    function setLoadingStatus() {
+        obj.selectTrack_btn.innerHTML = SPINNER_HTML;
+        obj.started_time.innerHTML = SPINNER_HTML;
+        obj.finished_time.innerHTML = SPINNER_HTML;
+        obj.distance.innerHTML = SPINNER_HTML;
+    }
+    function createTrackButton(track) {
+        let btn = document.createElement('a');
+        btn.classList = 'dropdown-item';
+        btn.href = '#';
+        btn.innerText = formatDropDownName(track);
+        btn.onclick = onDropDownSelected;
+        btn.track = track;
+        return btn;
+    }
+    function formatDropDownName(track) {
+        return '[' + track.uid + '] ' + track.name;
+    }
 </script>
 </body>
 </html>

@@ -3,6 +3,7 @@ function Updater(obj) {
     this.refresh_interval = -1;
     this.refresh_interval_id = null; // setInterval returns ID, which is stored here
     this.waitingData = false;
+    this.key_result = null; // bool, if tracks were requested with secret key
 
     this.onDataLoaded = null;
     this.onDataUpdated = null;
@@ -21,9 +22,9 @@ function Updater(obj) {
     }
 }
 
-Updater.prototype.loadData = function() {
+Updater.prototype.loadData = function(key=null) {
     // Is supposed to be called once at the very beginning (alerts all unexpected behaviour)
-    this._updateTracks((function() {
+    this._updateTracks(key, (function() {
         if (this.tracks.length == 0) {
             alert('No tracks found!');
             return;
@@ -72,12 +73,16 @@ Updater.prototype.getLatestUpdatePoints = function() {
     return this.points.slice(this.points.length - this.pointsNewLength, this.points.length);
 };
 
-Updater.prototype._updateTracks = function(callback=null) {
+Updater.prototype._updateTracks = function(key=null, callback=null) {
     // Retrieves tracks list from server and stores in this.tracks
     let url = URL_GETTRACKS;
+    if (key != null)
+        url += '?hidden=true&key=' + key;
     this._getJSON(url, (function (e, d) {
         if (!this._handleJSONResponse(e, d, url, ['tracks'])) return;
         this.tracks = d.tracks;
+        if ('key_result' in d)
+            this.key_result = d.key_result;
         if (callback) callback();
     }).bind(this));
 };

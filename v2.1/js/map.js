@@ -253,8 +253,8 @@ Tracker.prototype.updatePopupInfo = function(vals) {
 Tracker.prototype.updateTrackInfo = function() {
     let lwp = this.upd.points[this.upd.points.length - 1]; // last waypoint
     if (lwp) {
-        if (lwp.timestamp_log) obj.trackInfo.timeStart.innerText = this.upd.points[0].timestamp_log;
-        else if (lwp.timestamp_server) obj.trackInfo.timeStart.innerText = this.upd.points[0].timestamp_server + ' (request time)';
+        if (this.upd.points[0].timestamp_log) obj.trackInfo.timeStart.innerText = this.upd.points[0].timestamp_log;
+        else if (this.upd.points[0].timestamp_server) obj.trackInfo.timeStart.innerText = this.upd.points[0].timestamp_server + ' (request time)';
         else obj.trackInfo.timeStart.innerText = "unknown";
         // Update last_update
         if (lwp.timestamp_log) obj.trackInfo.time.innerText = lwp.timestamp_log;
