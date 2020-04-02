@@ -40,7 +40,7 @@
 </div>
 
 <!-- Modal -->
-<div class="modal" id="password_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true"  data-backdrop="static" data-keyboard="false">
+<div class="modal hide fade" id="password_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true"  data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -170,8 +170,7 @@
 
     $(document).ready(function(){
         // Show modal at the very beginning
-        $('#password_modal').modal();
-        $('#wrong_key_alert').hide();
+        $('#password_modal').modal('show');
     });
 
 
