@@ -1,6 +1,9 @@
 <?php
     require "configuration_my.php";
 
+    header("Access-Control-Allow-Origin: *");
+    header('Content-Type: application/json');
+
     // If true, include also hidden tracks. Requires secret key $key
     $hidden = isset($_GET['hidden']) ? $_GET['hidden'] : null;
     $key = isset($_GET['key']) ? $_GET['key'] : null;
@@ -40,7 +43,5 @@
     if ($hidden)
         $ret .= ', "key_result": ' . ($key == $secretKey ? 'true' : 'false');
     $ret .= '}';
-
-    header("Access-Control-Allow-Origin: *");
-    header('Content-Type: application/json');
+    
     echo $ret;

@@ -47,6 +47,8 @@
         return null;
     }
 
+    // TODO: probably minimize number of requests by using one nested request
+
     $track_uid = 0; // 0 corresponds to Unknown entry in DB
     // Get track_uid from DB if track name is specified in $_GET
     if (isset($data['track'])) {

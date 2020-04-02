@@ -1,6 +1,9 @@
 <?php
     require "configuration_my.php";
 
+    header("Access-Control-Allow-Origin: *");
+    header('Content-Type: application/json');
+
     // Track uid to filter all entries in DB
     $track_uid = isset($_GET['track_uid']) ? $_GET['track_uid'] : null;
 
@@ -48,7 +51,5 @@
     }
 
     $output = '{"points": '.$points.'}';
-
-    header("Access-Control-Allow-Origin: *");
-    header('Content-Type: application/json');
+    
     echo $output;

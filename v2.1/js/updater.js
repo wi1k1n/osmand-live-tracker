@@ -111,6 +111,7 @@ Updater.prototype._onRefreshIntervalChanged = function() {
     this._setUpdateInterval();
 };
 Updater.prototype._getJSON = function(url, callback) {
+    // TODO: there is no need to store this functino here. Should be in util.js
     // console.log('Requesting: ' + url);
     // Simply makes an AJAX request
     let xhr = new XMLHttpRequest();
@@ -121,9 +122,13 @@ Updater.prototype._getJSON = function(url, callback) {
         if (status === 200) callback(null, xhr.response);
         else callback(status);
     };
+    xhr.onerror = function() {
+        callback('Error during request', null);
+    };
     xhr.send();
 };
 Updater.prototype._handleJSONResponse = function(e, d, url, arr_keys) {
+    // TODO: probably also should be in util.js
     // Takes err and data return values after getJSON request, and handles it properly
     if (e != null || d == null) {
         alert('Could not update data!');

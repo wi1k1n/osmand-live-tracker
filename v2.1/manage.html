@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- TODO: using caching would drastically increase performance ;) -->
 <html lang="en">
 <head>
     <title>Bootstrap Example</title>
@@ -19,7 +20,7 @@
             min-height: 256px;
          }
         .jumbotron {
-            padding: 2em;
+            padding: 1em;
         }
 
         button:disabled {
@@ -36,7 +37,12 @@
 
 <div class="jumbotron text-center">
     <h1>Track My Bike Control Panel</h1>
-<!--    <p>You</p>-->
+</div>
+
+<!-- Wrong key alert -->
+<div class="alert alert-warning" id="wrong_key_alert" style="display: none;">
+    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+    <strong>Warning!</strong> Entered secret key is wrong!
 </div>
 
 <!-- Modal -->
@@ -56,8 +62,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-    <!--                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>-->
-                    <button type="submit" class="btn btn-primary" id="pwd_submit">Continue</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" id="as_spectator_btn">Continue as spectator</button>
+                    <button type="submit" class="btn btn-primary" id="pwd_submit">Submit</button>
                 </div>
             </form>
         </div>
@@ -75,9 +81,10 @@
                 <div class="dropdown-menu w-100 text-center" id="track_list"></div>
             </div>
             <div class="list-group mt-3">
-                <div class="list-group-item">Started on: <span id="started_time">unknown</span></div>
+                <div class="list-group-item"><i>Started on:</i> <span id="started_time">unknown</span></div>
                 <div class="list-group-item">Finished on: <span id="finished_time">unknown</span></div>
                 <div class="list-group-item">Travelled: <span id="distance">unknown</span></div>
+                <div class="list-group-item">State: <span id="track_state">unknown</span></div>
             </div>
             <div class="btn-group mt-3 d-flex">
                 <button class="btn btn-lg btn-primary btn-super-control" type="button" id="enable_btn" disabled>Enable</button>
@@ -86,11 +93,6 @@
             </div>
         </div>
     </div>
-</div>
-
-<div class="alert alert-warning" id="wrong_key_alert" style="display: none;">
-    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-    <strong>Warning!</strong> Entered secret key is wrong!
 </div>
 <script>
     const SPINNER_HTML = '<span class="spinner-border spinner-border-sm"></span>    Loading..';
@@ -101,7 +103,11 @@
         started_time: document.getElementById('started_time'),
         finished_time: document.getElementById('finished_time'),
         distance: document.getElementById('distance'),
-        password_modal: document.getElementById('password_modal')
+        track_state: document.getElementById('track_state'),
+        password_modal: document.getElementById('password_modal'),
+        enable_btn: document.getElementById('enable_btn'),
+        default_btn: document.getElementById('default_btn'),
+        delete_btn: document.getElementById('delete_btn')
     };
     var KEY = null;
 
@@ -153,7 +159,7 @@
         // If enable buttons in case authentication was successful
         if (upd.key_result)
             $('.btn-super-control').removeAttr('disabled');
-        else
+        else if (KEY)
             $('#wrong_key_alert').show();
 
         // Change corresponding information on page
@@ -171,9 +177,39 @@
     $(document).ready(function(){
         // Show modal at the very beginning
         $('#password_modal').modal('show');
+        $('#enable_btn').click(onEnableBtnClicked);
+        $('#as_spectator_btn').click(onPwdSubmit);
     });
 
 
+    function onEnableBtnClicked(e) {
+        // When user tries to enable/disable track
+        if (!KEY) return;
+        let url = URL_MANAGETRACKS + '?key=' + KEY
+            + '&track_uid=' + (upd.selectedTrack.uid)
+            + '&action=' + (upd.selectedTrack.hidden ? 'enable' : 'disable');
+        setLoadingStatus();
+        upd._getJSON(url, function (e, d) {
+            if (e != null || d == null) {
+                alert('Request failed!');
+                console.error('Requested url: ' + url);
+                console.error(e);
+                upd.loadData(KEY);
+            } else if ('error' in d) {
+                alert('Error occurred!');
+                console.error('Requested url: ' + url);
+                console.error(d['error']);
+                upd.loadData(KEY);
+            } else if ('result' in d) {
+                if (d.result.toLowerCase() === 'success') {
+                    upd.selectedTrack.hidden = !upd.selectedTrack.hidden;
+                    selectTrack(upd.selectedTrack);
+                } else {
+                    upd.loadData(KEY);
+                }
+            }
+        });
+    }
     function onPwdSubmit(e) { // Is called when user submits secret key
         KEY = $('#pwd_field').val();
 
@@ -195,11 +231,14 @@
 
     function selectTrack(track) {
         // Update dropdown info
-        obj.selectTrack_btn.innerText = formatDropDownName(track);
+        let defaultUid = Math.max(...upd.tracks.filter(x => !x.hidden).map(x => x.uid)); // For marking default track in dropdown
+        // obj.selectTrack_btn.innerText = formatDropDownName(track);
+        obj.selectTrack_btn.innerText = formatDropDownName(track, track.uid === defaultUid, track.hidden);
         obj.selectTrack_btn.disabled = false;
         obj.track_list.innerHTML = '';
         dropDownBtns.forEach(function(e) {
-            if (e.uid === track.uid) return;
+            // if (e.track.uid === track.uid) return; // If we want to exclude currently selected track from list
+            e.innerText = formatDropDownName(e.track, e.track.uid === defaultUid, e.track.hidden);
             obj.track_list.appendChild(e);
         });
 
@@ -220,14 +259,16 @@
             obj.finished_time.innerText = 'unknown';
             obj.distance.innerText = 'unknown';
         }
+        obj.track_state.innerText = track.hidden ? 'Disabled' : 'Enabled';
 
-        if (upd.key_result) {
+        if (upd.key_result) { // Dynamic interaction if not spectator
             $('#enable_btn').html(track.hidden ? 'Enable' : 'Disable');
-            $('#default_btn').attr('disabled', Math.max(...upd.tracks.map(x => x.uid)) === track.uid);
+            $('#default_btn').attr('disabled', track.hidden || Math.max(...upd.tracks.filter(x => !x.hidden).map(x => x.uid)) === track.uid);
         }
     }
     function setLoadingStatus() {
         obj.selectTrack_btn.innerHTML = SPINNER_HTML;
+        obj.selectTrack_btn.disabled = true;
         obj.started_time.innerHTML = SPINNER_HTML;
         obj.finished_time.innerHTML = SPINNER_HTML;
         obj.distance.innerHTML = SPINNER_HTML;
@@ -241,8 +282,11 @@
         btn.track = track;
         return btn;
     }
-    function formatDropDownName(track) {
-        return '[' + track.uid + '] ' + track.name;
+    function formatDropDownName(track, def=null, hidden=null) {
+        let defPref = '';
+        if (def !== null && def) defPref = '> ';
+        if (hidden === null || !hidden) return defPref + track.name;
+        return defPref + '(' + track.name + ')';
     }
 </script>
 </body>
