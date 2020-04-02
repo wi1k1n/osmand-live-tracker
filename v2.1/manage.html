@@ -13,16 +13,25 @@
     <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.2.1/build/ol.js"></script>
 
     <style>
+        /* OpenLayers-related styling */
         .map {
             position: relative;
             width: 100%;		/* desired width */
             height: 100%;
             min-height: 256px;
          }
+        .ol-control-custom {
+            top: 65px;
+            left: .5em;
+        }
+        .ol-touch .ol-control-custom {
+            top: 80px;
+        }
+
+        /* Bootstrap-related styling */
         .jumbotron {
             padding: 1em;
         }
-
         button:disabled {
              cursor: not-allowed;
              pointer-events: all !important;
@@ -82,9 +91,9 @@
             </div>
             <div class="list-group mt-3">
                 <div class="list-group-item"><i>Started on:</i> <span id="started_time">unknown</span></div>
-                <div class="list-group-item">Finished on: <span id="finished_time">unknown</span></div>
-                <div class="list-group-item">Travelled: <span id="distance">unknown</span></div>
-                <div class="list-group-item">State: <span id="track_state">unknown</span></div>
+                <div class="list-group-item"><i>Finished on:</i> <span id="finished_time">unknown</span></div>
+                <div class="list-group-item"><i>Travelled:</i> <span id="distance">unknown</span></div>
+                <div class="list-group-item"><i>State:</i> <span id="track_state">unknown</span></div>
             </div>
             <div class="btn-group mt-3 d-flex">
                 <button class="btn btn-lg btn-primary btn-super-control" type="button" id="enable_btn" disabled>Enable</button>
@@ -142,7 +151,12 @@
         }),
         controls: ol.control.defaults().extend([
             new ol.control.ScaleLine({bar: true, text: false, steps: 2}),
-            new ol.control.FullScreen()
+            new ol.control.FullScreen(),
+            new CustomControl({
+                label: 'H',//'⌂',
+                className: 'ol-control-home ol-control-custom',
+                callback: centerMapOnTrack
+            }),
         ])
     });
 
@@ -246,7 +260,7 @@
         // Draw map
         let mCoords = upd.points.map(x => ol.proj.fromLonLat([x.lon, x.lat]));
         trackLine.setCoordinates(mCoords);
-        map.getView().fit(trackLine, {padding: [50, 50, 50, 50]});
+        centerMapOnTrack();
 
         // Update list info
         if (upd.points.length > 0) {
@@ -275,6 +289,9 @@
         obj.finished_time.innerHTML = SPINNER_HTML;
         obj.distance.innerHTML = SPINNER_HTML;
         $('.btn-super-control').attr('disabled', true);
+    }
+    function centerMapOnTrack(){
+        map.getView().fit(trackLine, {padding: [50, 50, 50, 50]});
     }
     function createTrackButton(track) {
         let btn = document.createElement('a');
