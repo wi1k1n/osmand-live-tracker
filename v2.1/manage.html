@@ -226,7 +226,7 @@
 
         // Update track
         setLoadingStatus();
-        upd.loadTrack(this.track);
+        upd.loadTrack(this.track, KEY);
     }
 
     function selectTrack(track) {
@@ -262,6 +262,7 @@
         obj.track_state.innerText = track.hidden ? 'Disabled' : 'Enabled';
 
         if (upd.key_result) { // Dynamic interaction if not spectator
+            $('.btn-super-control').attr('disabled', false);
             $('#enable_btn').html(track.hidden ? 'Enable' : 'Disable');
             $('#default_btn').attr('disabled', track.hidden || Math.max(...upd.tracks.filter(x => !x.hidden).map(x => x.uid)) === track.uid);
         }
@@ -272,6 +273,7 @@
         obj.started_time.innerHTML = SPINNER_HTML;
         obj.finished_time.innerHTML = SPINNER_HTML;
         obj.distance.innerHTML = SPINNER_HTML;
+        $('.btn-super-control').attr('disabled', true);
     }
     function createTrackButton(track) {
         let btn = document.createElement('a');

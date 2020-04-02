@@ -31,10 +31,10 @@ Updater.prototype.loadData = function(key=null) {
         }
         this.selectedTrack = this.tracks.find(x => x.uid == Math.max(...this.tracks.map(x => x.uid)));
         // this.selectedTrack = this.tracks[this.tracks.length-1];
-        let ending = null;
-        if (DEBUG) ending = DEBUG_DATABATCH;
-        this._requestPoints(this.selectedTrack.uid, null, ending, (function(p) {
-            if (p.length == 0) {
+        let limit = null;
+        if (DEBUG) limit = DEBUG_DATABATCH;
+        this._requestPoints(this.selectedTrack.uid, null, limit, key, (function(p) {
+            if (p === null || p.length == 0) {
                 alert('There are no points to load! Please try later, when data is going to appear!');
                 return;
             }
@@ -44,28 +44,34 @@ Updater.prototype.loadData = function(key=null) {
         }).bind(this));
     }.bind(this)));
 };
-Updater.prototype.updateData = function(auto=null) {
+Updater.prototype.updateData = function(auto=null, key=null) {
     // console.log('upd.updateData' + (auto ? ' (auto)' : ''));
     if (this.waitingData) return; // Deny all updates, if we are still waiting response from server
     this.waitingData = true;
     // Updates current list of points with new ones
     let starting = null;
-    let ending = null;
+    let limit = null;
     if (this.points.length > 0) starting = this.points[this.points.length-1].uid;
-    if (DEBUG && starting != null) ending = starting + DEBUG_DATABATCH;
-    this._requestPoints(this.selectedTrack.uid, starting, ending, (function(p) {
+    if (DEBUG) limit = DEBUG_DATABATCH;
+    this._requestPoints(this.selectedTrack.uid, starting, limit, key, (function(p) {
         if (!auto) this._setUpdateInterval(); // restart interval timer if manually clicked
-        if (p.length > 0)
-            this.points = this.points.concat(p);
-        this.pointsNewLength = p.length;
+        if (p === null) {
+            this.points = [];
+            this.pointsNewLength = 0;
+        } else {
+            if (p.length > 0) {
+                this.points = this.points.concat(p);
+            }
+            this.pointsNewLength = p.length;
+        }
         if (this.onDataUpdated) this.onDataUpdated();
         this.waitingData = false;
     }).bind(this));
 };
-Updater.prototype.loadTrack = function(track) {
+Updater.prototype.loadTrack = function(track, key=null) {
     this.selectedTrack = track;
     this.points = [];
-    this.updateData();
+    this.updateData(null, key);
 };
 
 Updater.prototype.getLatestUpdatePoints = function() {
@@ -86,14 +92,20 @@ Updater.prototype._updateTracks = function(key=null, callback=null) {
         if (callback) callback();
     }).bind(this));
 };
-Updater.prototype._requestPoints = function(track_uid, starting, ending, callback) {
+Updater.prototype._requestPoints = function(track_uid, starting, limit, key, callback) {
     // Careful, this method does not assign points to internal variable this.points!
     let url = URL_GETPOINTS + '?track_uid=' + track_uid;
-    if (starting != null) url += '&starting=' + starting;
-    if (ending != null) url += '&ending=' + ending;
+    if (starting != null) url += '&startingWithUid=' + starting;
+    if (limit != null) url += '&limit=' + limit;
+    if (key != null) url += '&key=' + key;
     this._getJSON(url, (function (e, d) {
-        if (!this._handleJSONResponse(e, d, url, ['points'])) return;
-        if (callback) callback(d.points);
+        // if (!this._handleJSONResponse(e, d, url, ['points'])) return;
+        if (this._handleJSONResponse(e, d, url, ['points'])) {
+            if (callback)
+                callback(d.points);
+        } else if (callback)
+            callback(null);
+
     }).bind(this));
 };
 
