@@ -54,15 +54,12 @@
     <strong>Warning!</strong> Entered secret key is wrong!
 </div>
 
-<!-- Modal -->
+<!-- Modal password -->
 <div class="modal hide fade" id="password_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true"  data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLongTitle">Enter secret key:</h5>
-<!--                <button type="button" class="close" data-dismiss="modal" aria-label="Close">-->
-<!--                    <span aria-hidden="true">&times;</span>-->
-<!--                </button>-->
+                <h5 class="modal-title">Enter secret key:</h5>
             </div>
             <form action="javascript:onPwdSubmit();">
                 <div class="modal-body">
@@ -73,6 +70,29 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal" id="as_spectator_btn">Continue as spectator</button>
                     <button type="submit" class="btn btn-primary" id="pwd_submit">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal password -->
+<div class="modal hide fade" id="rename_modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true"  data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rename track</h5>
+            </div>
+            <form action="javascript:onRenameSubmit();">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <p>From '<span id="rename_old_name">unknown</span>' to:</p>
+                        <input type="text" class="form-control" placeholder="New name" required="required" id="newname_field">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" id="cancel_rename_btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="rename_submit">Rename</button>
                 </div>
             </form>
         </div>
@@ -116,6 +136,7 @@
         track_state: document.getElementById('track_state'),
         password_modal: document.getElementById('password_modal'),
         enable_btn: document.getElementById('enable_btn'),
+        rename_btn: document.getElementById('rename_btn'),
         default_btn: document.getElementById('default_btn'),
         delete_btn: document.getElementById('delete_btn')
     };
@@ -194,6 +215,7 @@
         $('#password_modal').modal('show');
         $('#enable_btn').click(onEnableBtnClicked);
         $('#as_spectator_btn').click(onPwdSubmit);
+        $('#rename_btn').click(onRenameBtnClicked);
     });
 
 
@@ -223,6 +245,43 @@
                     upd.loadData(KEY);
                 }
             }
+        });
+    }
+    function onRenameBtnClicked(e) {
+        // When user clicks 'rename' button
+        $('#rename_old_name').text(upd.selectedTrack.name);
+        $('#rename_modal').modal('show');
+    }
+    function onRenameSubmit(e) {
+        // When user submits new name
+        // console.log('New name: ' + $('#newname_field').val());
+        if (!KEY) return;
+        let newName = $('#newname_field').val();
+        let url = URL_MANAGETRACKS + '?key=' + KEY
+            + '&track_uid=' + (upd.selectedTrack.uid)
+            + '&action=rename'
+            + '&newname=' + encodeURI(newName);
+        setLoadingStatus();
+        upd._getJSON(url, function (e, d) {
+            if (e != null || d == null) {
+                alert('Request failed!');
+                console.error('Requested url: ' + url);
+                console.error(e);
+                upd.loadData(KEY);
+            } else if ('error' in d) {
+                alert('Error occurred!');
+                console.error('Requested url: ' + url);
+                console.error(d['error']);
+                upd.loadData(KEY);
+            } else if ('result' in d) {
+                if (d.result.toLowerCase() === 'success') {
+                    upd.selectedTrack.name = newName;
+                    selectTrack(upd.selectedTrack);
+                } else {
+                    upd.loadData(KEY);
+                }
+            }
+            $('#rename_modal').modal('hide');
         });
     }
     function onPwdSubmit(e) { // Is called when user submits secret key
