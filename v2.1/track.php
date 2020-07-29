@@ -11,7 +11,7 @@
     $data = array(
         'lat' => isset($_GET['lat']) ? "'".floatval($_GET['lat'])."'" : 'NULL',
         'lon' => isset($_GET['lon']) ? "'".floatval($_GET['lon'])."'" : 'NULL',
-        'timestamp' => isset($_GET['timestamp']) ? "'".date('Y-m-d H:i:s', time()-intval($_GET['timestamp'])/1000.0)."'" : "current_timestamp()",
+        'timestamp' => isset($_GET['timestamp']) ? "'".date('Y-m-d H:i:s', intval($_GET['timestamp'])/1000.0)."'" : "current_timestamp()",
         'hdop' => isset($_GET['hdop']) ? "'".floatval($_GET['hdop'])."'" : 'NULL',
         'altitude' => isset($_GET['altitude']) ? "'".floatval($_GET['altitude'])."'" : 'NULL',
         'speed' => isset($_GET['speed']) ? "'".floatval($_GET['speed'])."'" : 'NULL',
